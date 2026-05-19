@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	_ "github.com/cicbyte/weread-web/internal/logic"
+	"github.com/cicbyte/weread-web/internal/cron"
 	"github.com/cicbyte/weread-web/internal/mcp"
 	"github.com/cicbyte/weread-web/internal/router"
 	"github.com/gogf/gf/v2/frame/g"
@@ -56,6 +57,7 @@ var (
 					}
 				})
 			})
+			cron.StartScheduler()
 			s.Run()
 			return nil
 		},
