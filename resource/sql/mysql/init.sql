@@ -1,99 +1,141 @@
--- WeKeep MySQL 初始化脚本
+-- WeRead Plus MySQL 初始化脚本
 -- 包含所有表的 CREATE 语句，不含示例数据
--- 执行: mysql -u root -p wekeep < init.sql
+-- 执行: mysql -u root -p weread_plus < init.sql
 
 -- ============================================================
--- 1. categories 分类表
+-- 1. users 用户表
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `categories` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `name` VARCHAR(255) NOT NULL COMMENT '分类名称，唯一',
-    `description` TEXT NOT NULL COMMENT '分类描述',
-    `icon` VARCHAR(512) DEFAULT NULL COMMENT '分类图标URL或标识',
-    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序，数字越大越靠前',
+CREATE TABLE IF NOT EXISTS `users` (
+    `vid` VARCHAR(64) NOT NULL COMMENT '微信读书用户ID',
+    `nickname` VARCHAR(255) DEFAULT NULL COMMENT '昵称',
+    `avatar_url` VARCHAR(512) DEFAULT NULL COMMENT '头像URL',
     `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_name` (`name`),
-    KEY `idx_sort` (`sort`),
-    KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分类表';
+    PRIMARY KEY (`vid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- ============================================================
--- 2. authors 作者表
+-- 2. api_keys API Key 表
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `authors` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `name` VARCHAR(255) NOT NULL COMMENT '作者名称',
-    `normalized_name` VARCHAR(255) NOT NULL COMMENT '标准化名称（去重用）',
-    `avatar` VARCHAR(512) DEFAULT NULL COMMENT '头像URL',
-    `bio` TEXT DEFAULT NULL COMMENT '作者简介',
-    `website` VARCHAR(512) DEFAULT NULL COMMENT '个人网站',
-    `article_count` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '文章数量',
+CREATE TABLE IF NOT EXISTS `api_keys` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `api_key` VARCHAR(255) NOT NULL COMMENT 'API Key（加密存储）',
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否有效: 0-无效, 1-有效',
     `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `last_used` TIMESTAMP NULL DEFAULT NULL COMMENT '最后使用时间',
+    `expires_at` TIMESTAMP NULL DEFAULT NULL COMMENT '过期时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_vid` (`vid`),
+    KEY `idx_api_key` (`api_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='API Key表';
+
+-- ============================================================
+-- 3. shelf_books 书架缓存表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `shelf_books` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `book_id` VARCHAR(64) NOT NULL COMMENT '书籍ID',
+    `title` VARCHAR(512) DEFAULT NULL COMMENT '书名',
+    `author` VARCHAR(255) DEFAULT NULL COMMENT '作者',
+    `cover` VARCHAR(512) DEFAULT NULL COMMENT '封面URL',
+    `category` VARCHAR(128) DEFAULT NULL COMMENT '分类',
+    `is_album` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否有声书',
+    `secret` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否私密',
+    `is_top` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否置顶',
+    `finish_reading` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否读完',
+    `read_update_time` BIGINT DEFAULT 0 COMMENT '最近阅读时间戳',
+    `synced_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '同步时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_vid_book` (`vid`, `book_id`),
+    KEY `idx_vid` (`vid`),
+    KEY `idx_vid_category` (`vid`, `category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='书架缓存表';
+
+-- ============================================================
+-- 4. reading_progress 阅读进度快照表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `reading_progress` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `book_id` VARCHAR(64) NOT NULL COMMENT '书籍ID',
+    `progress` INT NOT NULL DEFAULT 0 COMMENT '进度百分比(0-100)',
+    `chapter_uid` BIGINT DEFAULT NULL COMMENT '章节UID',
+    `chapter_offset` INT NOT NULL DEFAULT 0 COMMENT '章节内偏移',
+    `read_time` INT NOT NULL DEFAULT 0 COMMENT '累计阅读时长(秒)',
+    `update_time` BIGINT NOT NULL DEFAULT 0 COMMENT '最后阅读时间戳',
+    `snapshot_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '快照时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_vid_book` (`vid`, `book_id`),
+    KEY `idx_vid_snapshot` (`vid`, `snapshot_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='阅读进度快照表';
+
+-- ============================================================
+-- 5. notes 笔记缓存表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `notes` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `book_id` VARCHAR(64) NOT NULL COMMENT '书籍ID',
+    `note_type` VARCHAR(32) NOT NULL COMMENT '笔记类型: highlight/review/bookmark',
+    `source_id` VARCHAR(128) DEFAULT NULL COMMENT '原始ID',
+    `chapter_uid` BIGINT DEFAULT NULL COMMENT '章节UID',
+    `content` TEXT DEFAULT NULL COMMENT '笔记内容',
+    `range_pos` VARCHAR(128) DEFAULT NULL COMMENT '划线位置范围',
+    `created_at` TIMESTAMP NULL DEFAULT NULL COMMENT '原始创建时间',
+    `synced_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '同步时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_vid_source_type` (`vid`, `source_id`, `note_type`),
+    KEY `idx_vid_book` (`vid`, `book_id`),
+    KEY `idx_vid_type` (`vid`, `note_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='笔记缓存表';
+
+-- ============================================================
+-- 6. reading_stats 阅读统计快照表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `reading_stats` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `mode` VARCHAR(32) NOT NULL COMMENT '统计维度: weekly/monthly/annually/overall',
+    `base_time` BIGINT NOT NULL DEFAULT 0 COMMENT '基准时间戳',
+    `total_read_time` INT NOT NULL DEFAULT 0 COMMENT '总阅读时长(秒)',
+    `read_days` INT NOT NULL DEFAULT 0 COMMENT '阅读天数',
+    `raw_data` JSON DEFAULT NULL COMMENT '原始统计数据(JSON)',
+    `snapshot_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '快照时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_vid_mode` (`vid`, `mode`),
+    KEY `idx_vid_snapshot` (`vid`, `snapshot_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='阅读统计快照表';
+
+-- ============================================================
+-- 7. sync_logs 同步任务记录表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `sync_logs` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `sync_type` VARCHAR(32) NOT NULL COMMENT '同步类型: full/shelf/notes/progress/stats',
+    `status` VARCHAR(32) NOT NULL COMMENT '状态: running/success/failed',
+    `started_at` TIMESTAMP NULL DEFAULT NULL COMMENT '开始时间',
+    `finished_at` TIMESTAMP NULL DEFAULT NULL COMMENT '结束时间',
+    `items_count` INT NOT NULL DEFAULT 0 COMMENT '同步条目数',
+    `error_msg` TEXT DEFAULT NULL COMMENT '错误信息',
+    PRIMARY KEY (`id`),
+    KEY `idx_vid` (`vid`),
+    KEY `idx_vid_status` (`vid`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='同步任务记录表';
+
+-- ============================================================
+-- 8. sync_config 同步配置表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `sync_config` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `vid` VARCHAR(64) NOT NULL COMMENT '用户ID',
+    `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
+    `frequency` VARCHAR(32) NOT NULL DEFAULT 'daily' COMMENT '频率: hourly/every6h/every12h/daily/weekly',
+    `sync_scope` VARCHAR(32) NOT NULL DEFAULT 'full' COMMENT '范围: full/shelf/notes/progress',
+    `sync_time` VARCHAR(8) NOT NULL DEFAULT '02:00' COMMENT '每日同步时间(HH:MM)',
     `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_normalized_name` (`normalized_name`),
-    KEY `idx_article_count` (`article_count` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='作者表';
-
--- ============================================================
--- 3. articles 文章表
--- ============================================================
-CREATE TABLE IF NOT EXISTS `articles` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `title` VARCHAR(512) NOT NULL COMMENT '文章标题',
-    `url` VARCHAR(2048) DEFAULT NULL COMMENT '原文链接',
-    `summary` TEXT DEFAULT NULL COMMENT '文章摘要',
-    `content` MEDIUMTEXT DEFAULT NULL COMMENT 'Markdown内容',
-    `tags` JSON DEFAULT NULL COMMENT '标签数组（JSON格式）',
-    `date_added` BIGINT DEFAULT NULL COMMENT '添加时间戳(毫秒，保留前端原始时间)',
-    `author_id` INT(11) UNSIGNED DEFAULT NULL COMMENT '作者ID（外键）',
-    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_date_added` (`date_added`),
-    KEY `idx_created_at` (`created_at`),
-    KEY `idx_title_author` (`title`(100), `author_id`),
-    KEY `idx_author_id` (`author_id`),
-    CONSTRAINT `fk_articles_author_id` FOREIGN KEY (`author_id`) REFERENCES `authors` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
-
--- ============================================================
--- 4. images 图片元信息表
--- ============================================================
-CREATE TABLE IF NOT EXISTS `images` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `original_url` VARCHAR(2048) NOT NULL COMMENT '原始图片URL',
-    `original_url_hash` VARCHAR(64) NOT NULL COMMENT 'URL哈希(SHA256)',
-    `storage_path` VARCHAR(512) NOT NULL COMMENT '存储路径',
-    `storage_url` VARCHAR(1024) DEFAULT NULL COMMENT '访问URL',
-    `file_size` INT(11) UNSIGNED DEFAULT 0 COMMENT '文件大小(字节)',
-    `mime_type` VARCHAR(64) DEFAULT NULL COMMENT 'MIME类型',
-    `ref_count` INT(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '引用计数',
-    `download_status` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '下载状态: 0-待下载, 1-下载中, 2-下载成功, 3-下载失败',
-    `error_message` VARCHAR(512) DEFAULT NULL COMMENT '错误信息',
-    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_url_hash` (`original_url_hash`),
-    KEY `idx_ref_count` (`ref_count`),
-    KEY `idx_download_status` (`download_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='图片元信息表';
-
--- ============================================================
--- 5. article_images 文章-图片关联表
--- ============================================================
-CREATE TABLE IF NOT EXISTS `article_images` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `article_id` INT(11) UNSIGNED NOT NULL COMMENT '文章ID',
-    `image_id` INT(11) UNSIGNED NOT NULL COMMENT '图片ID',
-    `position` INT(11) UNSIGNED DEFAULT 0 COMMENT '图片位置(文章中的顺序)',
-    `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_article_image` (`article_id`, `image_id`),
-    KEY `idx_article_id` (`article_id`),
-    KEY `idx_image_id` (`image_id`),
-    CONSTRAINT `fk_article_images_article` FOREIGN KEY (`article_id`) REFERENCES `articles` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_article_images_image` FOREIGN KEY (`image_id`) REFERENCES `images` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章-图片关联表';
+    UNIQUE KEY `uk_vid` (`vid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='同步配置表';

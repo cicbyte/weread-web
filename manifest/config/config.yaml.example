@@ -1,4 +1,4 @@
-# WeKeep 配置模板
+# WeRead Plus 配置模板
 # 使用: cp config.yaml.example config.yaml
 
 server:
@@ -19,28 +19,29 @@ logger:
 
 database:
   default:
-    link: "sqlite::@file(db/wekeep.db)"
+    link: "sqlite::@file(db/weread_plus.db)"
     # MySQL
-    #link: "mysql:root:123456@tcp(172.17.0.1:3306)/wekeep?charset=utf8mb4&parseTime=true&loc=Local"
+    #link: "mysql:root:123456@tcp(172.17.0.1:3306)/weread_plus?charset=utf8mb4&parseTime=true&loc=Local"
+
+# 微信读书 API 网关
+weread:
+  gateway: "https://i.weread.qq.com/api/agent/gateway"
+  skillVersion: "1.0.3"
+
+# JWT 认证
+auth:
+  jwtSecret: "weread-plus-jwt-secret-change-me"
+  jwtExpire: 168  # 7天（小时）
+  jwtRefreshExpire: 720  # 30天（小时）
 
 storage:
   type: "local"
   local:
     basePath: "uploads"
     baseURL: "/uploads"
-  # RustFS（S3 兼容对象存储）
-  #type: "rustfs"
-  #rustfs:
-  #  endpoint: "http://172.17.0.1:9000"
-  #  bucket: "wekeep"
-  #  username: "rustfsadmin"
-  #  password: "rustfsadmin"
-  #  timeout: 60
   image:
     maxFileSize: 10485760
-    pathPrefix: "articles/images"
-  migration:
-    enabled: false
+    pathPrefix: "exports"
 
 search:
   enabled: false

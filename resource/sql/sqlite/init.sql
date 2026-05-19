@@ -1,123 +1,152 @@
--- WeKeep SQLite 初始化脚本
+-- WeRead Plus SQLite 初始化脚本
 -- 包含所有表的 CREATE 语句，不含示例数据
--- 执行: sqlite3 wekeep.db < init.sql
+-- 执行: sqlite3 weread_plus.db < init.sql
 
 -- ============================================================
--- 1. categories 分类表
+-- 1. users 用户表
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `categories` (
-    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-    `name` TEXT NOT NULL UNIQUE,
-    `description` TEXT NOT NULL,
-    `icon` TEXT,
-    `sort` INTEGER NOT NULL DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS `users` (
+    `vid` TEXT PRIMARY KEY,
+    `nickname` TEXT,
+    `avatar_url` TEXT,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS `idx_categories_sort` ON `categories` (`sort`);
-CREATE INDEX IF NOT EXISTS `idx_categories_created_at` ON `categories` (`created_at`);
-
-CREATE TRIGGER IF NOT EXISTS `tr_categories_updated_at`
-AFTER UPDATE ON `categories`
+CREATE TRIGGER IF NOT EXISTS `tr_users_updated_at`
+AFTER UPDATE ON `users`
 FOR EACH ROW
 BEGIN
-    UPDATE `categories` SET `updated_at` = CURRENT_TIMESTAMP WHERE `id` = NEW.`id`;
+    UPDATE `users` SET `updated_at` = CURRENT_TIMESTAMP WHERE `vid` = NEW.`vid`;
 END;
 
 -- ============================================================
--- 2. authors 作者表
+-- 2. api_keys API Key 表
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `authors` (
+CREATE TABLE IF NOT EXISTS `api_keys` (
     `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-    `name` TEXT NOT NULL,
-    `normalized_name` TEXT NOT NULL UNIQUE,
-    `avatar` TEXT,
-    `bio` TEXT,
-    `website` TEXT,
-    `article_count` INTEGER NOT NULL DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `vid` TEXT NOT NULL,
+    `api_key` TEXT NOT NULL,
+    `is_active` INTEGER DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `last_used` DATETIME,
+    `expires_at` DATETIME
 );
 
-CREATE INDEX IF NOT EXISTS `idx_authors_article_count` ON `authors` (`article_count` DESC);
-
-CREATE TRIGGER IF NOT EXISTS `tr_authors_updated_at`
-AFTER UPDATE ON `authors`
-FOR EACH ROW
-BEGIN
-    UPDATE `authors` SET `updated_at` = CURRENT_TIMESTAMP WHERE `id` = NEW.`id`;
-END;
+CREATE INDEX IF NOT EXISTS `idx_api_keys_vid` ON `api_keys` (`vid`);
+CREATE INDEX IF NOT EXISTS `idx_api_keys_api_key` ON `api_keys` (`api_key`);
 
 -- ============================================================
--- 3. articles 文章表
+-- 3. shelf_books 书架缓存表
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `articles` (
+CREATE TABLE IF NOT EXISTS `shelf_books` (
     `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-    `title` TEXT NOT NULL,
-    `url` TEXT,
-    `summary` TEXT,
+    `vid` TEXT NOT NULL,
+    `book_id` TEXT NOT NULL,
+    `title` TEXT,
+    `author` TEXT,
+    `cover` TEXT,
+    `category` TEXT,
+    `is_album` INTEGER DEFAULT 0,
+    `secret` INTEGER DEFAULT 0,
+    `is_top` INTEGER DEFAULT 0,
+    `finish_reading` INTEGER DEFAULT 0,
+    `read_update_time` INTEGER DEFAULT 0,
+    `synced_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(`vid`, `book_id`)
+);
+
+CREATE INDEX IF NOT EXISTS `idx_shelf_books_vid` ON `shelf_books` (`vid`);
+CREATE INDEX IF NOT EXISTS `idx_shelf_books_category` ON `shelf_books` (`vid`, `category`);
+
+-- ============================================================
+-- 4. reading_progress 阅读进度快照表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `reading_progress` (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `vid` TEXT NOT NULL,
+    `book_id` TEXT NOT NULL,
+    `progress` INTEGER DEFAULT 0,
+    `chapter_uid` INTEGER,
+    `chapter_offset` INTEGER DEFAULT 0,
+    `read_time` INTEGER DEFAULT 0,
+    `update_time` INTEGER DEFAULT 0,
+    `snapshot_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS `idx_reading_progress_vid_book` ON `reading_progress` (`vid`, `book_id`);
+CREATE INDEX IF NOT EXISTS `idx_reading_progress_snapshot` ON `reading_progress` (`vid`, `snapshot_at`);
+
+-- ============================================================
+-- 5. notes 笔记缓存表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `notes` (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `vid` TEXT NOT NULL,
+    `book_id` TEXT NOT NULL,
+    `note_type` TEXT NOT NULL,
+    `source_id` TEXT,
+    `chapter_uid` INTEGER,
     `content` TEXT,
-    `tags` TEXT,
-    `date_added` INTEGER,
-    `author_id` INTEGER,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`author_id`) REFERENCES `authors` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+    `range_pos` TEXT,
+    `created_at` DATETIME,
+    `synced_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(`vid`, `source_id`, `note_type`)
 );
 
-CREATE INDEX IF NOT EXISTS `idx_articles_date_added` ON `articles` (`date_added`);
-CREATE INDEX IF NOT EXISTS `idx_articles_created_at` ON `articles` (`created_at`);
-CREATE INDEX IF NOT EXISTS `idx_articles_author_id` ON `articles` (`author_id`);
+CREATE INDEX IF NOT EXISTS `idx_notes_vid_book` ON `notes` (`vid`, `book_id`);
+CREATE INDEX IF NOT EXISTS `idx_notes_type` ON `notes` (`vid`, `note_type`);
 
-CREATE TRIGGER IF NOT EXISTS `tr_articles_updated_at`
-AFTER UPDATE ON `articles`
+-- ============================================================
+-- 6. reading_stats 阅读统计快照表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `reading_stats` (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `vid` TEXT NOT NULL,
+    `mode` TEXT NOT NULL,
+    `base_time` INTEGER DEFAULT 0,
+    `total_read_time` INTEGER DEFAULT 0,
+    `read_days` INTEGER DEFAULT 0,
+    `raw_data` TEXT,
+    `snapshot_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS `idx_reading_stats_vid_mode` ON `reading_stats` (`vid`, `mode`);
+CREATE INDEX IF NOT EXISTS `idx_reading_stats_snapshot` ON `reading_stats` (`vid`, `snapshot_at`);
+
+-- ============================================================
+-- 7. sync_logs 同步任务记录表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `sync_logs` (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `vid` TEXT NOT NULL,
+    `sync_type` TEXT NOT NULL,
+    `status` TEXT NOT NULL,
+    `started_at` DATETIME,
+    `finished_at` DATETIME,
+    `items_count` INTEGER DEFAULT 0,
+    `error_msg` TEXT
+);
+
+CREATE INDEX IF NOT EXISTS `idx_sync_logs_vid` ON `sync_logs` (`vid`);
+CREATE INDEX IF NOT EXISTS `idx_sync_logs_status` ON `sync_logs` (`vid`, `status`);
+
+-- ============================================================
+-- 8. sync_config 同步配置表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `sync_config` (
+    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `vid` TEXT NOT NULL UNIQUE,
+    `enabled` INTEGER DEFAULT 1,
+    `frequency` TEXT DEFAULT 'daily',
+    `sync_scope` TEXT DEFAULT 'full',
+    `sync_time` TEXT DEFAULT '02:00',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER IF NOT EXISTS `tr_sync_config_updated_at`
+AFTER UPDATE ON `sync_config`
 FOR EACH ROW
 BEGIN
-    UPDATE `articles` SET `updated_at` = CURRENT_TIMESTAMP WHERE `id` = NEW.`id`;
+    UPDATE `sync_config` SET `updated_at` = CURRENT_TIMESTAMP WHERE `id` = NEW.`id`;
 END;
-
--- ============================================================
--- 4. images 图片元信息表
--- ============================================================
-CREATE TABLE IF NOT EXISTS `images` (
-    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-    `original_url` TEXT NOT NULL,
-    `original_url_hash` TEXT NOT NULL UNIQUE,
-    `storage_path` TEXT NOT NULL,
-    `storage_url` TEXT,
-    `file_size` INTEGER DEFAULT 0,
-    `mime_type` TEXT,
-    `ref_count` INTEGER NOT NULL DEFAULT 0,
-    `download_status` INTEGER NOT NULL DEFAULT 0,
-    `error_message` TEXT,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS `idx_images_ref_count` ON `images` (`ref_count`);
-CREATE INDEX IF NOT EXISTS `idx_images_download_status` ON `images` (`download_status`);
-
-CREATE TRIGGER IF NOT EXISTS `tr_images_updated_at`
-AFTER UPDATE ON `images`
-FOR EACH ROW
-BEGIN
-    UPDATE `images` SET `updated_at` = CURRENT_TIMESTAMP WHERE `id` = NEW.`id`;
-END;
-
--- ============================================================
--- 5. article_images 文章-图片关联表
--- ============================================================
-CREATE TABLE IF NOT EXISTS `article_images` (
-    `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-    `article_id` INTEGER NOT NULL,
-    `image_id` INTEGER NOT NULL,
-    `position` INTEGER DEFAULT 0,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (`article_id`, `image_id`),
-    FOREIGN KEY (`article_id`) REFERENCES `articles` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`image_id`) REFERENCES `images` (`id`) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS `idx_article_images_article_id` ON `article_images` (`article_id`);
-CREATE INDEX IF NOT EXISTS `idx_article_images_image_id` ON `article_images` (`image_id`);
