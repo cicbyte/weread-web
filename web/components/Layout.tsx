@@ -107,16 +107,8 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
             ))}
           </nav>
 
-          {/* 底部：收缩按钮 */}
-          <div className={`border-t border-gray-100 dark:border-slate-800 ${collapsed ? 'px-2 py-2' : 'px-3 py-3'}`}>
-            <button
-              onClick={toggleCollapse}
-              className={`flex items-center rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 w-full transition-colors ${collapsed ? 'justify-center py-2.5' : 'gap-3 px-3 py-2.5'}`}
-              title={collapsed ? '展开侧边栏' : '收起侧边栏'}
-            >
-              {collapsed ? <ChevronRight size={18} /> : <><ChevronLeft size={18} />收起</>}
-            </button>
-          </div>
+          {/* 底部留白 */}
+          <div className="h-2" />
         </div>
       </aside>
 
@@ -125,6 +117,15 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
         {/* 顶部导航栏 */}
         <header className="h-14 flex items-center justify-between px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex-shrink-0 z-10">
           <div className="flex items-center gap-3">
+            {/* 收缩/展开侧边栏 */}
+            <button
+              onClick={toggleCollapse}
+              className="hidden lg:flex p-1.5 rounded-lg text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+              title={collapsed ? '展开侧边栏' : '收起侧边栏'}
+            >
+              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+
             {/* 移动端菜单按钮 */}
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden">
               <Menu size={20} className="text-slate-600 dark:text-slate-400" />
