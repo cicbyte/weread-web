@@ -17,7 +17,7 @@ import (
 )
 
 // 默认配置（首次运行时自动创建，用户可修改）
-const defaultConfig = `# WeKeep 配置文件（可修改）
+const defaultConfig = `# weread-web 配置文件（可修改）
 server:
   address: ":8000"
   logPath: "log/server"
@@ -36,7 +36,7 @@ logger:
 
 database:
   default:
-    link: "sqlite::@file(db/wekeep.db)"
+    link: "sqlite::@file(db/weread.db)"
 
 storage:
   type: "local"
