@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Search, StickyNote,
-  Compass, Settings, Sun, Moon, LogOut, Menu, Loader2,
+  Settings, Sun, Moon, LogOut, Menu, Loader2,
   PanelLeftClose, PanelLeftOpen, Home
 } from 'lucide-react';
 import { wereadApi, proxyImageUrl } from '../services/apiService';
@@ -11,7 +11,6 @@ const navItems = [
   { path: '/', icon: LayoutDashboard, label: '仪表盘' },
   { path: '/bookshelf', icon: BookOpen, label: '书架' },
   { path: '/notes', icon: StickyNote, label: '笔记' },
-  { path: '/discover', icon: Compass, label: '发现' },
   { path: '/settings', icon: Settings, label: '设置' },
 ];
 
@@ -19,7 +18,6 @@ const breadcrumbMap: Record<string, string> = {
   '/': '仪表盘',
   '/bookshelf': '书架',
   '/notes': '笔记',
-  '/discover': '发现',
   '/settings': '设置',
 };
 

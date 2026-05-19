@@ -7,7 +7,6 @@ import DashboardPage from './pages/DashboardPage';
 import BookshelfPage from './pages/BookshelfPage';
 import BookDetailPage from './pages/BookDetailPage';
 import NotesPage from './pages/NotesPage';
-import DiscoverPage from './pages/DiscoverPage';
 import SettingsPage from './pages/SettingsPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,7 +39,6 @@ const AppContent: React.FC = () => {
         <Route path="bookshelf" element={<BookshelfPage />} />
         <Route path="book/:bookId" element={<BookDetailPage />} />
         <Route path="notes" element={<NotesPage />} />
-        <Route path="discover" element={<DiscoverPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
