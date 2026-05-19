@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Search, StickyNote,
   BarChart3, Compass, Settings, Sun, Moon, LogOut, Menu, X,
-  ChevronLeft, ChevronRight, ChevronDown, Home
+  PanelLeftClose, PanelLeftOpen, Home
 } from 'lucide-react';
 
 const navItems = [
@@ -123,7 +123,7 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
               className="hidden lg:flex p-1.5 rounded-lg text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
               title={collapsed ? '展开侧边栏' : '收起侧边栏'}
             >
-              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             </button>
 
             {/* 移动端菜单按钮 */}
