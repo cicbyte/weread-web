@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Loader2, BookOpen } from 'lucide-react';
 import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
@@ -7,18 +7,24 @@ import { useToast } from '../components/Toast';
 const SearchPage: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [keyword, setKeyword] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialKeyword = searchParams.get('q') || '';
+  const [keyword, setKeyword] = useState(initialKeyword);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!keyword.trim()) return;
+  useEffect(() => {
+    if (initialKeyword.trim()) {
+      doSearch(initialKeyword.trim());
+    }
+  }, []);
+
+  const doSearch = async (kw: string) => {
     setLoading(true);
     setSearched(true);
     try {
-      const data = await wereadApi.searchBooks(keyword.trim());
+      const data = await wereadApi.searchBooks(kw);
       const books = data?.results?.[0]?.books || [];
       setResults(books.map((b: any) => ({
         bookId: b.bookInfo?.bookId,
@@ -35,11 +41,19 @@ const SearchPage: React.FC = () => {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keyword.trim()) {
+      doSearch(keyword.trim());
+      navigate(`/search?q=${encodeURIComponent(keyword.trim())}`, { replace: true });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">搜索书籍</h2>
 
-      <form onSubmit={handleSearch} className="relative">
+      <form onSubmit={handleSubmit} className="relative">
         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"

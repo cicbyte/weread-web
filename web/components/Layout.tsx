@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Search, StickyNote,
@@ -39,6 +39,8 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem('weread_sidebar_collapsed') === 'true';
   });
@@ -135,6 +137,30 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
               <span className="text-slate-400">/</span>
               <span className="text-slate-700 dark:text-slate-200 font-medium">{breadcrumb}</span>
             </nav>
+          </div>
+
+          {/* 全局搜索框 */}
+          <div className="hidden sm:flex flex-1 max-w-md mx-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchKeyword.trim()) {
+                  navigate(`/search?q=${encodeURIComponent(searchKeyword.trim())}`);
+                  searchRef.current?.blur();
+                }
+              }}
+              className="relative w-full"
+            >
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                placeholder="搜索书籍..."
+                className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 focus:border-weread outline-none transition-colors"
+              />
+            </form>
           </div>
 
           <div className="flex items-center gap-2">
