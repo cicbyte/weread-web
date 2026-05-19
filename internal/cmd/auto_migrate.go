@@ -23,22 +23,28 @@ func autoMigrate(ctx context.Context) {
 	switch {
 	case strings.HasPrefix(dbType, "mysql"):
 		sqlFile = "resource/sql/mysql/init.sql"
-		checkSQL = "SHOW TABLES LIKE 'categories'"
+		checkSQL = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()"
 	case strings.HasPrefix(dbType, "sqlite"):
 		sqlFile = "resource/sql/sqlite/init.sql"
-		checkSQL = "SELECT name FROM sqlite_master WHERE type='table' AND name='categories'"
+		checkSQL = "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
 	default:
 		return
 	}
 
 	// 检查表是否已存在
-	result, err := g.DB().Query(ctx, checkSQL)
+	record, err := g.DB().GetOne(ctx, checkSQL)
 	if err != nil {
 		g.Log().Warningf(ctx, "Auto migrate check failed: %v", err)
 		return
 	}
-
-	if len(result) > 0 {
+	count := 0
+	if record != nil {
+		for _, v := range record {
+			count = v.Int()
+			break
+		}
+	}
+	if count > 0 {
 		g.Log().Info(ctx, "Database tables already exist, skip auto migrate")
 		return
 	}

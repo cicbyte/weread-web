@@ -100,7 +100,7 @@ func (s *sHealth) checkDatabase(ctx context.Context) api.CheckItem {
 		Name: "database",
 	}
 
-	err := g.DB().Model("categories").Ctx(ctx).Limit(1).Scan(&[]any{})
+	_, err := g.DB().Exec(ctx, "SELECT 1")
 	if err != nil {
 		check.Status = "error"
 		check.Error = fmt.Sprintf("database connection failed: %v", err)
