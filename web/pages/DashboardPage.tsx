@@ -20,7 +20,7 @@ const DashboardPage: React.FC = () => {
 
   const loadStats = async () => {
     try {
-      const data = await wereadApi.readDataDetail('monthly');
+      const data = await wereadApi.readDataDetail('annually');
       setStats(data);
     } catch (err: any) {
       showToast(err.message || '获取统计数据失败', 'error');
@@ -88,8 +88,20 @@ const DashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* readStat 摘要 */}
+      {stats?.readStat?.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {stats.readStat.map((s: any) => (
+            <div key={s.stat} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-slate-800">
+              <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{s.stat}</div>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{s.counts}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 核心指标卡片 */}
-      {stats && (
+      {stats && stats.totalReadTime > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-slate-800">
             <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-2">
@@ -146,7 +158,7 @@ const DashboardPage: React.FC = () => {
       )}
 
       {/* 无数据提示 */}
-      {!stats && (
+      {stats && stats.totalReadTime === 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-8 text-center">
           <p className="text-slate-500 dark:text-slate-400">暂无阅读数据</p>
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">点击右上角「同步数据」获取微信读书数据</p>
