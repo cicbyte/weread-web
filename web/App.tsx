@@ -8,7 +8,6 @@ import BookshelfPage from './pages/BookshelfPage';
 import SearchPage from './pages/SearchPage';
 import BookDetailPage from './pages/BookDetailPage';
 import NotesPage from './pages/NotesPage';
-import StatsPage from './pages/StatsPage';
 import DiscoverPage from './pages/DiscoverPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -43,7 +42,6 @@ const AppContent: React.FC = () => {
         <Route path="search" element={<SearchPage />} />
         <Route path="book/:bookId" element={<BookDetailPage />} />
         <Route path="notes" element={<NotesPage />} />
-        <Route path="stats" element={<StatsPage />} />
         <Route path="discover" element={<DiscoverPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
