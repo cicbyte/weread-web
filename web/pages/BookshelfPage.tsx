@@ -37,10 +37,10 @@ const BookshelfPage: React.FC = () => {
   });
 
   const tabs = [
-    { key: 'all', label: `全部 (${books.length})` },
-    { key: 'reading', label: '在读' },
-    { key: 'finished', label: '读完' },
-  ] as const;
+    { key: 'all' as const, label: `全部 (${books.length})` },
+    { key: 'reading' as const, label: '在读' },
+    { key: 'finished' as const, label: '读完' },
+  ];
 
   if (loading) {
     return (
@@ -51,68 +51,75 @@ const BookshelfPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">书架</h2>
-
-      {/* 搜索和筛选 */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">书架</h2>
+        <div className="relative w-48 sm:w-56">
+          <SearchIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索书名或作者..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 focus:border-weread outline-none"
+            className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 border-0 text-sm focus:ring-2 focus:ring-weread/30 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all"
           />
         </div>
-        <div className="flex gap-1 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-          {tabs.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                filter === key
-                  ? 'bg-white dark:bg-slate-700 text-weread shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      </div>
+
+      {/* 筛选标签 */}
+      <div className="flex gap-2">
+        {tabs.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
+              filter === key
+                ? 'bg-weread text-white'
+                : 'bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* 书籍网格 */}
       {filteredBooks.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filteredBooks.map((book: any) => (
             <div
               key={book.bookId}
               onClick={() => navigate(`/book/${book.bookId}`)}
-              className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+              className="group bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
             >
-              <div className="aspect-[3/4] bg-gray-100 dark:bg-slate-800 relative overflow-hidden">
-                {book.cover ? (
-                  <img src={proxyImageUrl(book.cover)} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
-                    <BookOpen size={32} />
+              <div className="relative overflow-hidden">
+                <img
+                  src={book.cover ? proxyImageUrl(book.cover) : undefined}
+                  alt={book.title}
+                  className="w-full aspect-[3/4] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                {!book.cover && (
+                  <div className="w-full aspect-[3/4] flex items-center justify-center bg-gray-100 dark:bg-slate-800">
+                    <BookOpen size={32} className="text-slate-300 dark:text-slate-600" />
                   </div>
                 )}
                 {book.finishReading === 1 && (
                   <span className="absolute top-2 right-2 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">已读完</span>
                 )}
               </div>
-              <div className="p-2.5">
-                <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{book.title}</div>
-                <div className="text-xs text-slate-400 truncate mt-0.5">{book.author}</div>
+              <div className="p-3 pb-4">
+                <div className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug line-clamp-2">{book.title}</div>
+                <div className="mt-1.5 text-xs text-slate-400 truncate">{book.author}</div>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-8 text-center">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+            <BookOpen size={28} className="text-slate-300" />
+          </div>
           <p className="text-slate-500 dark:text-slate-400">{search ? '未找到匹配的书籍' : '书架为空，请先同步数据'}</p>
         </div>
       )}
