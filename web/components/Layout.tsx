@@ -67,7 +67,7 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
       )}
 
       {/* 侧边栏 */}
-      <aside className={`fixed inset-y-0 left-0 z-30 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transform transition-all duration-200 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-16' : 'w-56'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-30 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transform transition-all duration-200 lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-16' : 'w-56'}`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={`flex items-center border-b border-gray-100 dark:border-slate-800 h-14 ${collapsed ? 'justify-center px-2' : 'gap-3 px-5'}`}>
