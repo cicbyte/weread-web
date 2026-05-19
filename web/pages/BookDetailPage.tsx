@@ -156,7 +156,7 @@ const BookDetailPage: React.FC = () => {
           </button>
         ))}
         <div className="flex items-center gap-1 px-2">
-          {(['markdown', 'html', 'txt'] as const).map((fmt) => (
+          {(['markdown', 'html', 'txt', 'pdf'] as const).map((fmt) => (
             <button
               key={fmt}
               onClick={() => handleExport(fmt)}
