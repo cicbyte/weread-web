@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { wereadApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -10,6 +11,8 @@ const formatTime = (seconds: number): string => {
   if (h > 0) return `${h}小时${m > 0 ? m + '分钟' : ''}`;
   return `${m}分钟`;
 };
+
+const COLORS = ['#07C160', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
 const StatsPage: React.FC = () => {
   const { showToast } = useToast();
@@ -48,6 +51,20 @@ const StatsPage: React.FC = () => {
     );
   }
 
+  // 准备分类偏好图表数据
+  const categoryData = (stats?.preferCategory || []).map((cat: any) => ({
+    name: cat.categoryTitle || '其他',
+    value: cat.readingTime || 0,
+    count: cat.readingCount || 0,
+    hours: Math.round((cat.readingTime || 0) / 360) / 10,
+  }));
+
+  // 准备时段分布数据
+  const timeData = (stats?.preferTime || []).map((val: number, idx: number) => ({
+    hour: `${(idx + 6) % 24}:00`,
+    minutes: Math.round((val || 0) / 60),
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -84,21 +101,43 @@ const StatsPage: React.FC = () => {
             ))}
           </div>
 
-          {/* 分类偏好 */}
-          {stats.preferCategory?.length > 0 && (
+          {/* 分类偏好图表 */}
+          {categoryData.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">分类偏好</h3>
-              <div className="space-y-3">
-                {stats.preferCategory.map((cat: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-24 text-sm text-slate-600 dark:text-slate-400 truncate">{cat.categoryTitle}</div>
-                    <div className="flex-1 h-4 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-weread rounded-full" style={{ width: `${(cat.val || 0) * 100}%` }} />
-                    </div>
-                    <div className="text-xs text-slate-400 w-16 text-right">{formatTime(cat.readingTime || 0)}</div>
-                  </div>
-                ))}
-              </div>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={categoryData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value: number, name: string) => {
+                      if (name === 'hours') return [`${value}h`, '阅读时长'];
+                      return [value, name];
+                    }}
+                    labelFormatter={(label) => `${label}`}
+                  />
+                  <Bar dataKey="hours" radius={[4, 4, 0, 0]}>
+                    {categoryData.map((_: any, idx: number) => (
+                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* 时段分布 */}
+          {timeData.length > 0 && timeData.some(d => d.minutes > 0) && (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">阅读时段分布</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={timeData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value: number) => [`${value}分钟`, '阅读时长']} />
+                  <Bar dataKey="minutes" fill="#07C160" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
 
@@ -124,11 +163,12 @@ const StatsPage: React.FC = () => {
             </div>
           )}
 
-          {/* 偏好时段 */}
-          {stats.preferTimeWord && (
+          {/* 偏好信息 */}
+          {stats.preferCategoryWord && (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">偏好时段</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{stats.preferTimeWord}</p>
+              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">偏好分析</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{stats.preferCategoryWord}</p>
+              {stats.preferTimeWord && <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{stats.preferTimeWord}</p>}
             </div>
           )}
         </>
