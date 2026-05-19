@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, BookOpen, Clock, List, MessageSquare, Star } from 'lucide-react';
+import { ArrowLeft, Loader2, BookOpen, List, MessageSquare, Star, Download } from 'lucide-react';
 import { wereadApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -13,6 +13,7 @@ const BookDetailPage: React.FC = () => {
   const [progress, setProgress] = useState<any>(null);
   const [highlights, setHighlights] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'notes' | 'reviews'>('info');
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +50,29 @@ const BookDetailPage: React.FC = () => {
   const handleTabChange = (tab: 'info' | 'notes' | 'reviews') => {
     setActiveTab(tab);
     if (tab === 'notes' && highlights.length === 0) loadHighlights();
+  };
+
+  const handleExport = async (format: string) => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('weread_token');
+      const resp = await fetch(`/api/v1/notes/export?bookId=${bookId}&format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) throw new Error('导出失败');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${book?.title || 'notes'}_笔记.${format === 'markdown' ? 'md' : format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('导出成功', 'success');
+    } catch (err: any) {
+      showToast(err.message || '导出失败', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) {
@@ -119,6 +143,20 @@ const BookDetailPage: React.FC = () => {
             <Icon size={14} /> {label}
           </button>
         ))}
+        <div className="flex items-center gap-1 px-2">
+          {(['markdown', 'html', 'txt'] as const).map((fmt) => (
+            <button
+              key={fmt}
+              onClick={() => handleExport(fmt)}
+              disabled={exporting}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-500 hover:text-weread hover:bg-weread/10 transition-colors disabled:opacity-50"
+              title={`导出为 ${fmt.toUpperCase()}`}
+            >
+              <Download size={12} />
+              {fmt === 'markdown' ? 'MD' : fmt.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab 内容 */}

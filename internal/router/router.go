@@ -30,6 +30,7 @@ func (router *Router) BindController(ctx context.Context, group *ghttp.RouterGro
 				controller.AuthManage,
 				controller.Proxy,
 				controller.Sync,
+				controller.ExportNotes,
 			)
 		})
 	})
