@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, BookOpen } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { wereadApi } from '../services/apiService';
+import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const formatTime = (seconds: number): string => {
@@ -16,6 +17,7 @@ const COLORS = ['#07C160', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 const StatsPage: React.FC = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<string>('monthly');
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -51,19 +53,56 @@ const StatsPage: React.FC = () => {
     );
   }
 
-  // 准备分类偏好图表数据
-  const categoryData = (stats?.preferCategory || []).map((cat: any) => ({
-    name: cat.categoryTitle || '其他',
-    value: cat.readingTime || 0,
-    count: cat.readingCount || 0,
-    hours: Math.round((cat.readingTime || 0) / 360) / 10,
+  if (!stats) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-8 text-center">
+        <p className="text-slate-500 dark:text-slate-400">暂无统计数据</p>
+      </div>
+    );
+  }
+
+  // readStat 摘要卡片
+  const readStatItems = (stats.readStat || []).map((s: any) => ({
+    label: s.stat,
+    value: s.counts,
   }));
 
-  // 准备时段分布数据
-  const timeData = (stats?.preferTime || []).map((val: number, idx: number) => ({
-    hour: `${(idx + 6) % 24}:00`,
-    minutes: Math.round((val || 0) / 60),
-  }));
+  // 核心指标
+  const coreMetrics = [
+    { label: '阅读天数', value: `${stats.readDays || 0}`, unit: '天' },
+    { label: '总时长', value: formatTime(stats.totalReadTime || 0), unit: '' },
+    { label: '日均时长', value: formatTime(stats.dayAverageReadTime || 0), unit: '' },
+    {
+      label: '环比变化',
+      value: stats.compare != null ? `${stats.compare >= 0 ? '+' : ''}${(stats.compare * 100).toFixed(0)}%` : '-',
+      unit: '',
+      color: stats.compare >= 0 ? 'text-green-600' : 'text-red-500',
+    },
+  ];
+
+  // 分类偏好
+  const categoryData = (stats.preferCategory || [])
+    .filter((c: any) => c.readingTime > 0)
+    .map((c: any) => ({
+      name: c.categoryTitle || '其他',
+      hours: Math.round(c.readingTime / 360) / 10,
+      count: c.readingCount || 0,
+    }));
+
+  // 时间趋势（readTimes）
+  const timeEntries = Object.entries(stats.readTimes || {})
+    .map(([ts, val]) => ({
+      ts: Number(ts),
+      value: val as number,
+      label: formatTimeLabel(Number(ts), mode),
+    }))
+    .sort((a, b) => a.ts - b.ts);
+
+  // 读书排行
+  const readLongest = stats.readLongest || [];
+
+  // 偏好书籍（带 bookInfo 的）
+  const preferBooksWithInfo = (stats.preferBooks || []).filter((b: any) => b.bookInfo);
 
   return (
     <div className="space-y-6">
@@ -84,101 +123,150 @@ const StatsPage: React.FC = () => {
         </div>
       </div>
 
-      {stats ? (
-        <>
-          {/* 核心指标 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: '阅读天数', value: stats.readDays || 0, unit: '天' },
-              { label: '总时长', value: formatTime(stats.totalReadTime || 0), unit: '' },
-              { label: '日均时长', value: formatTime(stats.dayAverageReadTime || 0), unit: '' },
-              { label: '环比变化', value: `${(stats.compare || 0) >= 0 ? '+' : ''}${((stats.compare || 0) * 100).toFixed(0)}%`, unit: '' },
-            ].map(({ label, value, unit }) => (
-              <div key={label} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-slate-800">
-                <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{label}</div>
-                <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{value}{unit}</div>
+      {/* readStat 摘要 */}
+      {readStatItems.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {readStatItems.map(({ label, value }) => (
+            <div key={label} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-slate-800">
+              <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{label}</div>
+              <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 核心指标 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {coreMetrics.map(({ label, value, unit, color }) => (
+          <div key={label} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-gray-100 dark:border-slate-800">
+            <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{label}</div>
+            <div className={`text-2xl font-bold ${color || 'text-slate-800 dark:text-slate-100'}`}>{value}{unit}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 偏好分析文字 */}
+      {stats.preferCategoryWord && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">偏好分析</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{stats.preferCategoryWord}</p>
+          {stats.readDistributionWord && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{stats.readDistributionWord}</p>}
+        </div>
+      )}
+
+      {/* 时间趋势图 */}
+      {timeEntries.length > 0 && timeEntries.some(e => e.value > 0) && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">阅读趋势</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={timeEntries} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v: number) => `${Math.round(v / 3600)}h`} />
+              <Tooltip formatter={(value: number) => [formatTime(value), '阅读时长']} />
+              <Bar dataKey="value" fill="#07C160" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* 分类偏好图表 */}
+      {categoryData.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">分类偏好</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={categoryData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(value: number, name: string) => {
+                if (name === 'hours') return [`${value}h`, '阅读时长'];
+                return [value, name];
+              }} />
+              <Bar dataKey="hours" radius={[4, 4, 0, 0]}>
+                {categoryData.map((_: any, idx: number) => (
+                  <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* 读书排行 */}
+      {readLongest.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">读书排行</h3>
+          <div className="space-y-3">
+            {readLongest.map((item: any, idx: number) => (
+              <div
+                key={idx}
+                onClick={() => item.book?.bookId && navigate(`/book/${item.book.bookId}`)}
+                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-lg p-1 -m-1 transition-colors"
+              >
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                  idx < 3 ? 'bg-weread text-white' : 'bg-gray-100 dark:bg-slate-800 text-slate-500'
+                }`}>{idx + 1}</span>
+                <div className="w-8 h-11 flex-shrink-0 bg-gray-100 dark:bg-slate-800 rounded overflow-hidden">
+                  {item.book?.cover ? (
+                    <img src={proxyImageUrl(item.book.cover)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen size={12} className="text-slate-300" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{item.book?.title || '-'}</div>
+                  <div className="text-xs text-slate-400">{item.book?.author || ''}</div>
+                </div>
+                <div className="text-sm text-slate-500 whitespace-nowrap">{formatTime(item.readTime || 0)}</div>
               </div>
             ))}
           </div>
+        </div>
+      )}
 
-          {/* 分类偏好图表 */}
-          {categoryData.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">分类偏好</h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={categoryData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === 'hours') return [`${value}h`, '阅读时长'];
-                      return [value, name];
-                    }}
-                    labelFormatter={(label) => `${label}`}
-                  />
-                  <Bar dataKey="hours" radius={[4, 4, 0, 0]}>
-                    {categoryData.map((_: any, idx: number) => (
-                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* 时段分布 */}
-          {timeData.length > 0 && timeData.some(d => d.minutes > 0) && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">阅读时段分布</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={timeData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => [`${value}分钟`, '阅读时长']} />
-                  <Bar dataKey="minutes" fill="#07C160" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* 读书排行 */}
-          {stats.readLongest?.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">读书排行</h3>
-              <div className="space-y-3">
-                {stats.readLongest.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      idx < 3 ? 'bg-weread text-white' : 'bg-gray-100 dark:bg-slate-800 text-slate-500'
-                    }`}>{idx + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-                        {item.book?.title || '-'}
-                      </div>
-                    </div>
-                    <div className="text-sm text-slate-500 whitespace-nowrap">{formatTime(item.readTime || 0)}</div>
-                  </div>
-                ))}
+      {/* 偏好书籍 */}
+      {preferBooksWithInfo.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-4">阅读标签</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {preferBooksWithInfo.map((item: any) => (
+              <div
+                key={item.type}
+                onClick={() => navigate(`/book/${item.bookInfo.bookId}`)}
+                className="flex gap-3 p-3 rounded-xl border border-gray-100 dark:border-slate-800 cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <div className="w-12 h-16 flex-shrink-0 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden">
+                  <img src={proxyImageUrl(item.bookInfo.cover)} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-weread font-medium mb-0.5">{item.title}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{item.bookInfo.title}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{item.bookInfo.author}</div>
+                  {item.reason && <div className="text-xs text-slate-400 mt-1">{item.reason}</div>}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* 偏好信息 */}
-          {stats.preferCategoryWord && (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">偏好分析</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{stats.preferCategoryWord}</p>
-              {stats.preferTimeWord && <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{stats.preferTimeWord}</p>}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-8 text-center">
-          <p className="text-slate-500 dark:text-slate-400">暂无统计数据</p>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 };
+
+function formatTimeLabel(ts: number, mode: string): string {
+  const d = new Date(ts * 1000);
+  if (mode === 'overall') {
+    return `${d.getFullYear()}`;
+  }
+  if (mode === 'annually') {
+    return `${d.getMonth() + 1}月`;
+  }
+  if (mode === 'monthly') {
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+  // weekly
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
 
 export default StatsPage;
