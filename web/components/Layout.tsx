@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Search, StickyNote,
-  Compass, Settings, Sun, Moon, LogOut, Menu, X,
+  Compass, Settings, Sun, Moon, LogOut, Menu, Loader2,
   PanelLeftClose, PanelLeftOpen, Home
 } from 'lucide-react';
+import { wereadApi, proxyImageUrl } from '../services/apiService';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: '仪表盘' },
   { path: '/bookshelf', icon: BookOpen, label: '书架' },
-  { path: '/search', icon: Search, label: '搜索' },
   { path: '/notes', icon: StickyNote, label: '笔记' },
   { path: '/discover', icon: Compass, label: '发现' },
   { path: '/settings', icon: Settings, label: '设置' },
@@ -18,7 +18,6 @@ const navItems = [
 const breadcrumbMap: Record<string, string> = {
   '/': '仪表盘',
   '/bookshelf': '书架',
-  '/search': '搜索',
   '/notes': '笔记',
   '/discover': '发现',
   '/settings': '设置',
@@ -39,11 +38,17 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const searchRef = useRef<HTMLInputElement>(null);
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem('weread_sidebar_collapsed') === 'true';
   });
+
+  // 搜索状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const searchWrapRef = useRef<HTMLDivElement>(null);
 
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -56,6 +61,54 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
     localStorage.removeItem('weread_vid');
     navigate('/login');
   };
+
+  // 搜索防抖
+  const handleSearchInput = (value: string) => {
+    setSearchKeyword(value);
+    clearTimeout(searchTimerRef.current);
+    if (!value.trim()) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    setSearchOpen(true);
+    setSearchLoading(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const data = await wereadApi.searchBooks(value.trim(), 8);
+        const books = (data?.results?.[0]?.books || []).map((b: any) => ({
+          bookId: b.bookInfo?.bookId,
+          title: b.bookInfo?.title,
+          author: b.bookInfo?.author,
+          cover: b.bookInfo?.cover,
+          rating: b.newRating,
+        }));
+        setSearchResults(books);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+  };
+
+  const handleSelectBook = (bookId: string) => {
+    setSearchOpen(false);
+    setSearchKeyword('');
+    setSearchResults([]);
+    navigate(`/book/${bookId}`);
+  };
+
+  // 点击外部关闭搜索下拉
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const breadcrumb = getBreadcrumb(location.pathname);
 
@@ -115,7 +168,7 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
       {/* 主内容区 */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* 顶部导航栏 */}
-        <header className="h-14 flex items-center justify-between px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex-shrink-0 z-10">
+        <header className="h-14 flex items-center justify-between px-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex-shrink-0 z-30">
           <div className="flex items-center gap-3">
             {/* 收缩/展开侧边栏 */}
             <button
@@ -139,28 +192,61 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
             </nav>
           </div>
 
-          {/* 全局搜索框 */}
-          <div className="hidden sm:flex flex-1 max-w-md mx-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (searchKeyword.trim()) {
-                  navigate(`/search?q=${encodeURIComponent(searchKeyword.trim())}`);
-                  searchRef.current?.blur();
-                }
-              }}
-              className="relative w-full"
-            >
+          {/* 全局搜索框 + 下拉结果 */}
+          <div ref={searchWrapRef} className="hidden sm:flex flex-1 max-w-md mx-4 relative">
+            <div className="relative w-full">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                ref={searchRef}
                 type="text"
                 value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onFocus={() => { if (searchKeyword.trim()) setSearchOpen(true); }}
                 placeholder="搜索书籍..."
                 className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 focus:border-weread outline-none transition-colors"
               />
-            </form>
+            </div>
+
+            {/* 搜索结果下拉 */}
+            {searchOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg max-h-96 overflow-y-auto z-50">
+                {searchLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={20} className="text-weread animate-spin" />
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="py-1">
+                    {searchResults.map((book) => (
+                      <div
+                        key={book.bookId}
+                        onClick={() => handleSelectBook(book.bookId)}
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <div className="w-8 h-11 flex-shrink-0 bg-gray-100 dark:bg-slate-700 rounded overflow-hidden">
+                          {book.cover ? (
+                            <img src={proxyImageUrl(book.cover)} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <BookOpen size={12} className="text-slate-300" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-slate-800 dark:text-slate-200 truncate">{book.title}</div>
+                          <div className="text-xs text-slate-400">{book.author}</div>
+                        </div>
+                        {book.rating > 0 && (
+                          <span className="text-xs text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30 px-1.5 py-0.5 rounded flex-shrink-0">
+                            {(book.rating / 10).toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-slate-400">未找到相关书籍</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
