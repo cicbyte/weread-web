@@ -11,6 +11,7 @@ import (
 
 type IMiddleware interface {
 	MiddlewareCORS(r *ghttp.Request)
+	MiddlewareAuth(r *ghttp.Request)
 }
 
 var localMiddleware IMiddleware
