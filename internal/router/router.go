@@ -29,6 +29,7 @@ func (router *Router) BindController(ctx context.Context, group *ghttp.RouterGro
 			authGroup.Bind(
 				controller.AuthManage,
 				controller.Proxy,
+				controller.Sync,
 			)
 		})
 	})

@@ -5,4 +5,5 @@ import (
 	_ "github.com/cicbyte/weread-web/internal/logic/health"
 	_ "github.com/cicbyte/weread-web/internal/logic/middleware"
 	_ "github.com/cicbyte/weread-web/internal/logic/proxy"
+	_ "github.com/cicbyte/weread-web/internal/logic/sync"
 )
