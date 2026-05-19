@@ -28,6 +28,7 @@ func (router *Router) BindController(ctx context.Context, group *ghttp.RouterGro
 			authGroup.Middleware(service.Middleware().MiddlewareAuth)
 			authGroup.Bind(
 				controller.AuthManage,
+				controller.Proxy,
 			)
 		})
 	})
