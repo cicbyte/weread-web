@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Loader2 } from 'lucide-react';
-import { wereadApi } from '../services/apiService';
+import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const NotesPage: React.FC = () => {
@@ -70,7 +70,7 @@ const NotesPage: React.FC = () => {
             className="text-sm text-weread hover:underline mb-3">← 返回笔记本列表</button>
           <div className="flex items-center gap-3 mb-4">
             {selectedBookInfo?.cover && (
-              <img src={selectedBookInfo.cover} alt="" className="w-10 h-14 rounded object-cover" />
+              <img src={proxyImageUrl(selectedBookInfo.cover)} alt="" className="w-10 h-14 rounded object-cover" />
             )}
             <div>
               <div className="font-medium text-slate-800 dark:text-slate-200">{selectedBookInfo?.title || '-'}</div>
@@ -129,7 +129,7 @@ const NotesPage: React.FC = () => {
             >
               <div className="w-12 h-16 flex-shrink-0 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden">
                 {nb.book?.cover ? (
-                  <img src={nb.book.cover} alt="" className="w-full h-full object-cover" />
+                  <img src={proxyImageUrl(nb.book.cover)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <BookOpen size={16} className="text-slate-300" />

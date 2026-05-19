@@ -9,9 +9,11 @@ CREATE TABLE IF NOT EXISTS `users` (
     `vid` VARCHAR(64) NOT NULL COMMENT '微信读书用户ID',
     `nickname` VARCHAR(255) DEFAULT NULL COMMENT '昵称',
     `avatar_url` VARCHAR(512) DEFAULT NULL COMMENT '头像URL',
+    `regist_time` BIGINT UNSIGNED DEFAULT 0 COMMENT '微信读书注册时间戳(稳定账户标识)',
     `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`vid`)
+    PRIMARY KEY (`vid`),
+    UNIQUE KEY `idx_regist_time` (`regist_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- ============================================================

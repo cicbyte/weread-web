@@ -40,6 +40,37 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return json.data;
 }
 
+// 代理请求 — 代理接口返回微信读书原始 JSON（无 code/data 包装）
+async function proxyRequest<T>(params: Record<string, unknown>): Promise<T> {
+  const url = `${API_BASE_URL}/weread/proxy`;
+  const token = localStorage.getItem('weread_token');
+  const config: RequestInit = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(params),
+  };
+
+  const response = await fetch(url, config);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('weread_token');
+      localStorage.removeItem('weread_vid');
+      window.location.href = '/login';
+      throw new Error('认证已过期，请重新登录');
+    }
+    const error = await response.json().catch(() => ({
+      message: `HTTP ${response.status}: ${response.statusText}`,
+    }));
+    throw new Error(error.message || '请求失败');
+  }
+
+  return response.json();
+}
+
 // 认证 API
 export const authApi = {
   login: (apiKey: string) =>
@@ -67,10 +98,7 @@ export const authApi = {
 // 代理 API - 转发到微信读书
 export const wereadApi = {
   proxy: (params: Record<string, unknown>) =>
-    request<unknown>('/weread/proxy', {
-      method: 'POST',
-      body: JSON.stringify(params),
-    }),
+    proxyRequest<unknown>(params),
 
   searchBooks: (keyword: string, count = 15) =>
     wereadApi.proxy({ api_name: '/store/search', keyword, scope: 10, count }) as Promise<any>,
@@ -146,3 +174,9 @@ export const healthApi = {
     version: string;
   }>('/health/detail'),
 };
+
+// 图片代理 — 通过本地缓存，避免每次请求 CDN
+export function proxyImageUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  return `${API_BASE_URL}/image/proxy?url=${encodeURIComponent(url)}`;
+}

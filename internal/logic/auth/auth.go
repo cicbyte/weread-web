@@ -5,7 +5,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
@@ -15,7 +17,6 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
-	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -30,26 +31,22 @@ func New() *sAuth {
 type sAuth struct{}
 
 // Login 使用 API Key 登录
+// 流程：验证 Key → 取 registTime → 查找/创建用户 → 返回 JWT
 func (s *sAuth) Login(ctx context.Context, req *api.LoginReq) (res *api.LoginRes, err error) {
-	// 1. 调用 WeRead shelf/sync 验证 API Key 并获取用户信息
-	vid, nickname, avatarUrl, err := s.verifyApiKey(ctx, req.ApiKey)
+	// 1. 验证 API Key 并获取账户标识
+	registTime, err := s.verifyApiKey(ctx, req.ApiKey)
 	if err != nil {
 		return nil, fmt.Errorf("API Key 验证失败: %w", err)
 	}
 
-	// 2. 创建或更新用户
-	_, err = g.DB().Model("users").Ctx(ctx).Save(g.Map{
-		"vid":        vid,
-		"nickname":   nickname,
-		"avatar_url": avatarUrl,
-	})
+	// 2. 通过 registTime 查找已有用户
+	vid, err := s.findOrCreateUser(ctx, registTime)
 	if err != nil {
-		return nil, fmt.Errorf("创建用户失败: %w", err)
+		return nil, err
 	}
 
 	// 3. 存储 API Key（加密）
-	err = s.storeApiKey(ctx, vid, req.ApiKey)
-	if err != nil {
+	if err := s.storeApiKey(ctx, vid, req.ApiKey); err != nil {
 		return nil, fmt.Errorf("存储 API Key 失败: %w", err)
 	}
 
@@ -121,20 +118,28 @@ func (s *sAuth) ListKeys(ctx context.Context, vid string) (res *api.ListKeysRes,
 }
 
 // BindKey 绑定新 API Key
+// 验证新 Key → 获取 registTime → 匹配同一用户则绑定，否则提示
 func (s *sAuth) BindKey(ctx context.Context, vid string, apiKey string) (res *api.BindKeyRes, err error) {
-	// 先验证新 Key 是否有效
-	newVid, _, _, err := s.verifyApiKey(ctx, apiKey)
+	registTime, err := s.verifyApiKey(ctx, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("API Key 验证失败: %w", err)
 	}
 
-	// 检查 vid 是否一致
-	if newVid != vid {
-		return nil, fmt.Errorf("该 API Key 绑定到其他用户")
+	// 检查 registTime 是否匹配当前用户
+	record, err := g.DB().Model("users").Ctx(ctx).Where("vid", vid).One()
+	if err != nil {
+		return nil, err
+	}
+	if record == nil {
+		return nil, fmt.Errorf("用户不存在")
 	}
 
-	err = s.storeApiKey(ctx, vid, apiKey)
-	if err != nil {
+	existingRegistTime := record["regist_time"].Int64()
+	if existingRegistTime != 0 && existingRegistTime != registTime {
+		return nil, fmt.Errorf("该 API Key 属于不同的微信读书账户")
+	}
+
+	if err := s.storeApiKey(ctx, vid, apiKey); err != nil {
 		return nil, err
 	}
 
@@ -197,7 +202,6 @@ func (s *sAuth) GetActiveApiKey(ctx context.Context, vid string) (apiKey string,
 		Data(g.Map{"last_used": gtime.Now()}).
 		Update()
 
-	// 解密 API Key
 	decrypted, err := s.decryptApiKey(record["api_key"].String())
 	if err != nil {
 		return "", fmt.Errorf("解密 API Key 失败: %w", err)
@@ -206,8 +210,10 @@ func (s *sAuth) GetActiveApiKey(ctx context.Context, vid string) (apiKey string,
 	return decrypted, nil
 }
 
-// verifyApiKey 调用 WeRead API 验证 API Key 并获取用户信息
-func (s *sAuth) verifyApiKey(ctx context.Context, apiKey string) (vid, nickname, avatarUrl string, err error) {
+// --- 内部方法 ---
+
+// verifyApiKey 验证 API Key 有效性，返回微信读书账户的 registTime
+func (s *sAuth) verifyApiKey(ctx context.Context, apiKey string) (registTime int64, err error) {
 	gateway := g.Cfg().MustGet(ctx, "weread.gateway").String()
 	if gateway == "" {
 		gateway = "https://i.weread.qq.com/api/agent/gateway"
@@ -217,84 +223,101 @@ func (s *sAuth) verifyApiKey(ctx context.Context, apiKey string) (vid, nickname,
 		skillVersion = "1.0.3"
 	}
 
-	// 调用 shelf/sync 验证 Key
 	client := g.Client()
 	client.SetHeaderMap(map[string]string{
 		"Authorization": "Bearer " + apiKey,
 		"Content-Type":  "application/json",
 	})
 
+	// 1. 调用 /shelf/sync 验证 Key 有效性
+	g.Log().Debugf(ctx, "verifyApiKey: 调用 /shelf/sync 验证 Key")
 	resp, err := client.Post(ctx, gateway, g.Map{
 		"api_name":      "/shelf/sync",
 		"skill_version": skillVersion,
 	})
 	if err != nil {
-		return "", "", "", fmt.Errorf("请求微信读书失败: %w", err)
+		return 0, fmt.Errorf("请求微信读书失败: %w", err)
 	}
 	defer resp.Close()
 
 	if resp.StatusCode != 200 {
-		return "", "", "", fmt.Errorf("API Key 无效或已过期 (HTTP %d)", resp.StatusCode)
+		return 0, fmt.Errorf("API Key 无效或已过期 (HTTP %d)", resp.StatusCode)
 	}
 
-	// 从响应中提取用户信息
-	// shelf/sync 的 books 数组里每条都有 userVid（同一个人的 vid）
 	body := resp.ReadAll()
 	result, err := gjson.DecodeToJson(body)
 	if err != nil {
-		return "", "", "", fmt.Errorf("响应格式错误: %w", err)
+		return 0, fmt.Errorf("响应格式错误: %w", err)
 	}
 
-	// 检查 errcode
-	errcode := result.Get("errcode")
-	if errcode != nil && errcode.Int() != 0 {
-		return "", "", "", fmt.Errorf("微信读书返回错误: %s", result.Get("errmsg"))
+	if errcode := result.Get("errcode"); errcode != nil && errcode.Int() != 0 {
+		return 0, fmt.Errorf("微信读书返回错误: %s", result.Get("errmsg"))
 	}
 
-	// 从 books 中提取 vid
 	books := result.Get("books")
-	if books != nil {
-		for _, book := range books.Array() {
-			bookMap := gconv.Map(book)
-			if v, ok := bookMap["userVid"]; ok && v != nil {
-				vid = gconv.String(v)
-				break
-			}
-		}
+	if books == nil || len(books.Array()) == 0 {
+		return 0, fmt.Errorf("书架为空，请确认 API Key 有效")
 	}
 
-	// 如果 shelf/sync 没返回 vid，尝试从 user/notebooks 获取
-	if vid == "" {
-		resp2, err := client.Post(ctx, gateway, g.Map{
-			"api_name":      "/user/notebooks",
-			"count":         1,
-			"skill_version": skillVersion,
-		})
-		if err == nil {
-			defer resp2.Close()
-			body2 := resp2.ReadAll()
-			result2, _ := gjson.DecodeToJson(body2)
-			if result2 != nil {
-				books2 := result2.Get("books")
-				if books2 != nil {
-					for _, book := range books2.Array() {
-						bookMap := gconv.Map(book)
-						if v, ok := bookMap["userVid"]; ok && v != nil {
-							vid = gconv.String(v)
-							break
-						}
-					}
-				}
-			}
-		}
+	// 2. 调用 /readdata/detail 获取 registTime（账户级稳定标识）
+	g.Log().Debug(ctx, "verifyApiKey: 调用 /readdata/detail 获取账户标识")
+	resp2, err := client.Post(ctx, gateway, g.Map{
+		"api_name":      "/readdata/detail",
+		"mode":          "overall",
+		"skill_version": skillVersion,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("获取账户信息失败: %w", err)
+	}
+	defer resp2.Close()
+
+	body2 := resp2.ReadAll()
+	g.Log().Debugf(ctx, "verifyApiKey: /readdata/detail 响应 status=%d", resp2.StatusCode)
+
+	result2, err := gjson.DecodeToJson(body2)
+	if err != nil {
+		return 0, fmt.Errorf("统计响应格式错误: %w", err)
 	}
 
-	if vid == "" {
-		// 最后尝试：使用 API Key 的 hash 作为临时 vid
-		return "", "", "", fmt.Errorf("无法获取用户 vid，请确认 API Key 有效")
+	registTime = result2.Get("registTime").Int64()
+	if registTime == 0 {
+		return 0, fmt.Errorf("无法获取账户注册时间")
 	}
 
-	return vid, "", "", nil
+	g.Log().Debugf(ctx, "verifyApiKey: registTime=%d", registTime)
+	return registTime, nil
+}
+
+// findOrCreateUser 通过 registTime 查找已有用户，不存在则创建
+func (s *sAuth) findOrCreateUser(ctx context.Context, registTime int64) (vid string, err error) {
+	record, err := g.DB().Model("users").Ctx(ctx).Where("regist_time", registTime).One()
+	if err != nil {
+		return "", fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	if record != nil {
+		// 已有用户，返回其 vid
+		vid = record["vid"].String()
+		g.Log().Debugf(ctx, "findOrCreateUser: 已有用户 vid=%s", vid)
+		return vid, nil
+	}
+
+	// 新用户，生成 vid
+	hash := sha256.Sum256([]byte(fmt.Sprintf("weread_%d", registTime)))
+	vid = hex.EncodeToString(hash[:16])
+
+	_, err = g.DB().Model("users").Ctx(ctx).Insert(g.Map{
+		"vid":         vid,
+		"regist_time": registTime,
+		"nickname":    "",
+		"avatar_url":  "",
+	})
+	if err != nil {
+		return "", fmt.Errorf("创建用户失败: %w", err)
+	}
+
+	g.Log().Debugf(ctx, "findOrCreateUser: 新用户 vid=%s, registTime=%d", vid, registTime)
+	return vid, nil
 }
 
 // generateJWT 生成 JWT Token
@@ -302,7 +325,7 @@ func (s *sAuth) generateJWT(vid string) (token string, expire int64, err error) 
 	secret := s.getJwtSecret()
 	hours := g.Cfg().MustGet(nil, "auth.jwtExpire").Int()
 	if hours == 0 {
-		hours = 168 // 7天
+		hours = 168
 	}
 
 	exp := time.Now().Add(time.Duration(hours) * time.Hour)
@@ -333,7 +356,6 @@ func (s *sAuth) storeApiKey(ctx context.Context, vid string, apiKey string) erro
 		Where("vid", vid).Where("api_key", encrypted).
 		Count()
 	if count > 0 {
-		// 已存在，激活它
 		g.DB().Model("api_keys").Ctx(ctx).
 			Where("vid", vid).Where("api_key", encrypted).
 			Data(g.Map{"is_active": 1}).
@@ -402,20 +424,17 @@ func (s *sAuth) decryptApiKey(cipherText string) (string, error) {
 	return string(plainText), nil
 }
 
-// getJwtSecret 获取 JWT 密钥
 func (s *sAuth) getJwtSecret() string {
 	secret := g.Cfg().MustGet(nil, "auth.jwtSecret").String()
 	if secret == "" {
 		secret = "weread-plus-default-secret"
 	}
-	// 确保密钥长度为 32 字节（AES-256）
 	if len(secret) < 32 {
 		secret = secret + "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	}
 	return secret[:32]
 }
 
-// getEncryptionKey 获取加密密钥（复用 JWT Secret）
 func (s *sAuth) getEncryptionKey() []byte {
 	secret := s.getJwtSecret()
 	return []byte(secret[:32])

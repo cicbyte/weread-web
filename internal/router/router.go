@@ -17,6 +17,7 @@ func (router *Router) BindController(ctx context.Context, group *ghttp.RouterGro
 		// 公开路由
 		group.Bind(
 			controller.Health,
+			controller.Image,
 		)
 		// 登录路由（单独绑定，不走认证中间件）
 		group.Bind(

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `vid` TEXT PRIMARY KEY,
     `nickname` TEXT,
     `avatar_url` TEXT,
+    `regist_time` INTEGER DEFAULT 0,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 );

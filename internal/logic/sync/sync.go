@@ -270,6 +270,9 @@ func (s *sSync) callWeReadAPIRaw(ctx context.Context, apiKey string, reqBody io.
 
 // syncShelf 同步书架数据
 func (s *sSync) syncShelf(ctx context.Context, vid string) (count int, err error) {
+	// 先清空旧数据
+	g.DB().Model("shelf_books").Ctx(ctx).Where("vid", vid).Delete()
+
 	body, err := s.CallWeReadAPI(ctx, vid, g.Map{
 		"api_name": "/shelf/sync",
 	})
@@ -281,6 +284,9 @@ func (s *sSync) syncShelf(ctx context.Context, vid string) (count int, err error
 	if err != nil {
 		return 0, err
 	}
+
+	booksArr := result.Get("books").Array()
+	g.Log().Debugf(ctx, "syncShelf: 获取到 %d 本书", len(booksArr))
 
 	// 处理电子书
 	books := result.Get("books")
@@ -305,8 +311,10 @@ func (s *sSync) syncShelf(ctx context.Context, vid string) (count int, err error
 					"finish_reading":  gconv.Int(b["finishReading"]),
 					"read_update_time": gconv.Int64(b["readUpdateTime"]),
 					"synced_at":       gtime.Now(),
-				}).Save()
-			if err == nil {
+				}).Insert()
+			if err != nil {
+				g.Log().Warningf(ctx, "syncShelf: save book err=%v", err)
+			} else {
 				count++
 			}
 		}
@@ -332,7 +340,7 @@ func (s *sSync) syncShelf(ctx context.Context, vid string) (count int, err error
 				isTop = gconv.Int(extra["isTop"])
 			}
 			_, err := g.DB().Model("shelf_books").Ctx(ctx).
-				Where("vid", vid).Where("book_id", gconv.String(info["albumId"])).
+								Where("vid", vid).Where("book_id", gconv.String(info["albumId"])).
 				Data(g.Map{
 					"vid":             vid,
 					"book_id":         gconv.String(info["albumId"]),
@@ -343,7 +351,7 @@ func (s *sSync) syncShelf(ctx context.Context, vid string) (count int, err error
 					"secret":          secret,
 					"is_top":          isTop,
 					"synced_at":       gtime.Now(),
-				}).Save()
+				}).Insert()
 			if err == nil {
 				count++
 			}
@@ -355,6 +363,9 @@ func (s *sSync) syncShelf(ctx context.Context, vid string) (count int, err error
 
 // syncNotes 同步笔记数据
 func (s *sSync) syncNotes(ctx context.Context, vid string) (count int, err error) {
+	// 先清空旧数据
+	g.DB().Model("notes").Ctx(ctx).Where("vid", vid).Delete()
+
 	// 获取书架上的所有书
 	books, err := g.DB().Model("shelf_books").Ctx(ctx).
 		Where("vid", vid).
@@ -385,7 +396,7 @@ func (s *sSync) syncNotes(ctx context.Context, vid string) (count int, err error
 						continue
 					}
 					g.DB().Model("notes").Ctx(ctx).
-						Where("vid", vid).Where("source_id", gconv.String(m["bookmarkId"])).Where("note_type", "highlight").
+												Where("vid", vid).Where("source_id", gconv.String(m["bookmarkId"])).Where("note_type", "highlight").
 						Data(g.Map{
 							"vid":        vid,
 							"book_id":    bookId,
@@ -396,7 +407,7 @@ func (s *sSync) syncNotes(ctx context.Context, vid string) (count int, err error
 							"range_pos":  gconv.String(m["range"]),
 							"created_at": time.Unix(gconv.Int64(m["createTime"]), 0).Format("2006-01-02 15:04:05"),
 							"synced_at":  gtime.Now(),
-						}).Save()
+						}).Insert()
 					count++
 				}
 			}
@@ -434,7 +445,7 @@ func (s *sSync) syncNotes(ctx context.Context, vid string) (count int, err error
 					continue
 				}
 				g.DB().Model("notes").Ctx(ctx).
-					Where("vid", vid).Where("source_id", gconv.String(review["reviewId"])).Where("note_type", "review").
+										Where("vid", vid).Where("source_id", gconv.String(review["reviewId"])).Where("note_type", "review").
 					Data(g.Map{
 						"vid":        vid,
 						"book_id":    bookId,
@@ -444,7 +455,7 @@ func (s *sSync) syncNotes(ctx context.Context, vid string) (count int, err error
 						"content":    gconv.String(review["content"]),
 						"created_at": time.Unix(gconv.Int64(review["createTime"]), 0).Format("2006-01-02 15:04:05"),
 						"synced_at":  gtime.Now(),
-					}).Save()
+					}).Insert()
 				count++
 			}
 
@@ -460,6 +471,9 @@ func (s *sSync) syncNotes(ctx context.Context, vid string) (count int, err error
 
 // syncProgress 同步阅读进度
 func (s *sSync) syncProgress(ctx context.Context, vid string) (count int, err error) {
+	// 先清空旧数据
+	g.DB().Model("reading_progress").Ctx(ctx).Where("vid", vid).Delete()
+
 	books, err := g.DB().Model("shelf_books").Ctx(ctx).
 		Where("vid", vid).
 		Fields("book_id").
@@ -507,6 +521,9 @@ func (s *sSync) syncProgress(ctx context.Context, vid string) (count int, err er
 
 // syncStats 同步阅读统计
 func (s *sSync) syncStats(ctx context.Context, vid string) (count int, err error) {
+	// 先清空旧数据
+	g.DB().Model("reading_stats").Ctx(ctx).Where("vid", vid).Delete()
+
 	modes := []string{"weekly", "monthly", "annually", "overall"}
 
 	for _, mode := range modes {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Loader2, BookOpen } from 'lucide-react';
-import { wereadApi } from '../services/apiService';
+import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const SearchPage: React.FC = () => {
@@ -64,7 +64,7 @@ const SearchPage: React.FC = () => {
             >
               <div className="w-16 h-22 flex-shrink-0 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden">
                 {book.cover ? (
-                  <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                  <img src={proxyImageUrl(book.cover)} alt={book.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <BookOpen size={20} className="text-slate-300" />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Compass, Loader2, BookOpen } from 'lucide-react';
-import { wereadApi } from '../services/apiService';
+import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const DiscoverPage: React.FC = () => {
@@ -47,7 +47,7 @@ const DiscoverPage: React.FC = () => {
             >
               <div className="aspect-[3/4] bg-gray-100 dark:bg-slate-800 relative overflow-hidden">
                 {book.cover ? (
-                  <img src={book.cover} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <img src={proxyImageUrl(book.cover)} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-300">
                     <BookOpen size={32} />

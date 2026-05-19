@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, BookOpen, List, MessageSquare, Star, Download } from 'lucide-react';
-import { wereadApi } from '../services/apiService';
+import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const BookDetailPage: React.FC = () => {
@@ -104,7 +104,7 @@ const BookDetailPage: React.FC = () => {
       <div className="flex gap-5">
         <div className="w-28 h-40 flex-shrink-0 bg-gray-100 dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm">
           {book?.cover ? (
-            <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+            <img src={proxyImageUrl(book.cover)} alt={book.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-300">
               <BookOpen size={36} />
