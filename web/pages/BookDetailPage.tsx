@@ -12,6 +12,7 @@ const BookDetailPage: React.FC = () => {
   const [chapters, setChapters] = useState<any[]>([]);
   const [progress, setProgress] = useState<any>(null);
   const [highlights, setHighlights] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'notes' | 'reviews'>('info');
   const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,16 @@ const BookDetailPage: React.FC = () => {
   const handleTabChange = (tab: 'info' | 'notes' | 'reviews') => {
     setActiveTab(tab);
     if (tab === 'notes' && highlights.length === 0) loadHighlights();
+    if (tab === 'reviews' && reviews.length === 0) loadReviews();
+  };
+
+  const loadReviews = async () => {
+    try {
+      const data = await wereadApi.reviewList(bookId!, 0);
+      setReviews(data?.reviews?.map((r: any) => r.review) || []);
+    } catch {
+      // ignore
+    }
   };
 
   const handleExport = async (format: string) => {
@@ -130,6 +141,7 @@ const BookDetailPage: React.FC = () => {
         {[
           { key: 'info', label: '目录', icon: List },
           { key: 'notes', label: '笔记', icon: MessageSquare },
+          { key: 'reviews', label: '点评', icon: Star },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -186,6 +198,33 @@ const BookDetailPage: React.FC = () => {
             </div>
           )) : (
             <p className="text-center text-slate-400 py-8">暂无笔记</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'reviews' && (
+        <div className="space-y-3">
+          {reviews.length > 0 ? reviews.map((r: any, i: number) => (
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                {r.author?.avatar && (
+                  <img src={r.author.avatar} alt="" className="w-6 h-6 rounded-full" />
+                )}
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{r.author?.name || '匿名'}</span>
+                {r.star > 0 && (
+                  <span className="text-xs text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30 px-1.5 py-0.5 rounded">
+                    {'★'.repeat(Math.round(r.star / 20))}
+                  </span>
+                )}
+                {r.isFinish === 1 && <span className="text-xs text-green-600">已读完</span>}
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{r.content}</p>
+              {r.chapterName && (
+                <div className="text-xs text-slate-400 mt-2">章节: {r.chapterName}</div>
+              )}
+            </div>
+          )) : (
+            <p className="text-center text-slate-400 py-8">暂无点评</p>
           )}
         </div>
       )}
