@@ -18,7 +18,7 @@ const COLORS = ['#07C160', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 const StatsPage: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<string>('monthly');
+  const [mode, setMode] = useState<string>('annually');
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +60,8 @@ const StatsPage: React.FC = () => {
       </div>
     );
   }
+
+  const hasData = (stats.totalReadTime > 0) || (stats.readDays > 0);
 
   // readStat 摘要卡片
   const readStatItems = (stats.readStat || []).map((s: any) => ({
@@ -122,6 +124,12 @@ const StatsPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {!hasData && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-8 text-center">
+          <p className="text-slate-500 dark:text-slate-400">该时段暂无阅读记录，试试切换到「今年」或「总计」查看</p>
+        </div>
+      )}
 
       {/* readStat 摘要 */}
       {readStatItems.length > 0 && (
