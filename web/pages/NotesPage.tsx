@@ -89,9 +89,12 @@ const NotesPage: React.FC = () => {
                   <div className="space-y-2">
                     {highlights.map((h: any, i: number) => (
                       <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 p-3">
-                        <blockquote className="text-sm text-slate-700 dark:text-slate-300 border-l-2 border-weread pl-3">
-                          {h.markText}
-                        </blockquote>
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs text-slate-400 mt-0.5 flex-shrink-0">{i + 1}.</span>
+                          <blockquote className="text-sm text-slate-700 dark:text-slate-300 border-l-2 border-weread pl-3">
+                            {h.markText}
+                          </blockquote>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -104,7 +107,7 @@ const NotesPage: React.FC = () => {
                   <div className="space-y-2">
                     {reviews.map((r: any, i: number) => (
                       <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 p-3">
-                        <p className="text-sm text-slate-700 dark:text-slate-300">💡 {r.content}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300"><span className="text-xs text-slate-400 mr-1">{i + 1}.</span>{r.content}</p>
                         {r.abstract && (
                           <p className="text-xs text-slate-400 mt-1 border-l-2 border-gray-200 dark:border-slate-700 pl-2">{r.abstract}</p>
                         )}
