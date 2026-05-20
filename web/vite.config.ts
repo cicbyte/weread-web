@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 8898,
         host: '0.0.0.0',
+        proxy: {
+          '/uploads': 'http://127.0.0.1:8793',
+        },
       },
       plugins: [react()],
       define: {

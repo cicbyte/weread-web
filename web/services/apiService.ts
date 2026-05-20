@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+export const SERVER_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
 interface ApiResponse<T> {
   code: number;

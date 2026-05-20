@@ -30,18 +30,18 @@ var (
 
 			mcpHandler := mcp.NewStreamableHTTPServer()
 
+			// uploads 静态文件（不走中间件，避免 JSON 包装破坏二进制数据）
+			s.Group("/uploads", func(group *ghttp.RouterGroup) {
+				group.ALL("/*", func(r *ghttp.Request) {
+					r.Response.ServeFile("uploads" + r.URL.Path[len("/uploads"):])
+					r.ExitAll()
+				})
+			})
+
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
 				r := &router.Router{}
 				r.BindController(ctx, group)
-
-				// uploads 静态文件
-				group.Group("/uploads", func(upGroup *ghttp.RouterGroup) {
-					upGroup.ALL("/*", func(r *ghttp.Request) {
-						r.Response.ServeFile("uploads" + r.URL.Path[len("/uploads"):])
-						r.ExitAll()
-					})
-				})
 
 				// MCP 路由
 				group.Group("/mcp", func(mcpGroup *ghttp.RouterGroup) {

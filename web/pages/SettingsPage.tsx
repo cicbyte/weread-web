@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X } from 'lucide-react';
-import { authApi, syncApi, proxyImageUrl } from '../services/apiService';
+import { authApi, syncApi, proxyImageUrl, SERVER_URL } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 type SettingsTab = 'profile' | 'keys' | 'sync' | 'about';
@@ -199,7 +199,7 @@ const SettingsPage: React.FC = () => {
               <div className="relative group flex-shrink-0">
                 <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-weread to-weread-dark shadow-lg shadow-weread/20">
                   {profile?.avatarUrl ? (
-                    <img src={profile.avatarUrl.startsWith('/') ? profile.avatarUrl : proxyImageUrl(profile.avatarUrl)} alt="" className="w-full h-full object-cover" />
+                    <img src={profile.avatarUrl.startsWith('/') ? `${SERVER_URL}${profile.avatarUrl}` : proxyImageUrl(profile.avatarUrl)} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
                       {profile?.nickname?.[0] || '?'}
