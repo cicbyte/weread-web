@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Loader2, ArrowLeft } from 'lucide-react';
+import { BookOpen, Loader2, ArrowLeft, Download, FileText, FileCode, FileDown } from 'lucide-react';
 import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -13,6 +13,8 @@ const NotesPage: React.FC = () => {
   const [highlights, setHighlights] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     loadNotebooks();
@@ -50,6 +52,29 @@ const NotesPage: React.FC = () => {
     }
   };
 
+  const handleExport = async (format: string) => {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('weread_token');
+      const resp = await fetch(`/api/v1/notes/export?bookId=${selectedBook}&format=${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) throw new Error('导出失败');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedBookInfo?.title || 'notes'}_笔记.${format === 'markdown' ? 'md' : format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('导出成功', 'success');
+    } catch (err: any) {
+      showToast(err.message || '导出失败', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -84,9 +109,41 @@ const NotesPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="font-medium text-slate-800 dark:text-slate-200">{selectedBookInfo?.title || '-'}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{selectedBookInfo?.author || ''}</div>
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  disabled={exporting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  <Download size={14} />
+                  {exporting ? '导出中...' : '导出笔记'}
+                </button>
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg py-1 min-w-[140px]">
+                      {([
+                        { fmt: 'markdown', label: 'Markdown', icon: FileCode },
+                        { fmt: 'html', label: 'HTML', icon: FileText },
+                        { fmt: 'txt', label: '纯文本', icon: FileText },
+                        { fmt: 'pdf', label: 'PDF', icon: FileDown },
+                      ] as const).map(({ fmt, label, icon: Icon }) => (
+                        <button
+                          key={fmt}
+                          onClick={() => { handleExport(fmt); setShowExportMenu(false); }}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <Icon size={14} className="text-slate-400" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
