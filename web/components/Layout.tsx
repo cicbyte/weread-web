@@ -127,9 +127,7 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={`flex items-center border-b border-gray-100 dark:border-slate-800 h-14 ${collapsed ? 'justify-center px-2' : 'gap-3 px-5'}`}>
-            <div className="w-9 h-9 bg-gradient-to-br from-weread to-weread-dark rounded-lg flex items-center justify-center text-white flex-shrink-0">
-              <BookOpen size={20} />
-            </div>
+            <img src="/favicon.svg" alt="" className="w-9 h-9 flex-shrink-0" />
             {!collapsed && (
               <div className="overflow-hidden">
                 <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">WeRead Plus</h1>
