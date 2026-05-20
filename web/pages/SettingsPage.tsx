@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw } from 'lucide-react';
+import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen } from 'lucide-react';
 import { authApi, syncApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
+
+type SettingsTab = 'profile' | 'keys' | 'sync' | 'about';
 
 const SettingsPage: React.FC = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [profile, setProfile] = useState<any>(null);
   const [keys, setKeys] = useState<any[]>([]);
   const [syncConfig, setSyncConfig] = useState<any>(null);
@@ -102,173 +105,240 @@ const SettingsPage: React.FC = () => {
     );
   }
 
+  const navItems = [
+    { key: 'profile' as SettingsTab, label: '用户信息', icon: User },
+    { key: 'keys' as SettingsTab, label: 'API Key', icon: Key },
+    { key: 'sync' as SettingsTab, label: '同步设置', icon: Clock },
+    { key: 'about' as SettingsTab, label: '关于', icon: Info },
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">设置</h2>
-
-      {/* 用户信息 */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <User size={18} className="text-weread" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">用户信息</h3>
-        </div>
-
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-weread to-weread-dark flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
-            {profile?.nickname?.[0] || '?'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{profile?.nickname || '未知用户'}</div>
-            <div className="text-xs text-slate-400 mt-0.5">VID: {profile?.vid || '-'}</div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-          >
-            <LogOut size={14} /> 退出登录
-          </button>
-        </div>
-      </div>
-
-      {/* 切换用户 */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <RefreshCw size={18} className="text-weread" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">切换用户</h3>
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="password"
-            value={newKey}
-            onChange={(e) => setNewKey(e.target.value)}
-            placeholder="输入新的 API Key 切换账号"
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 outline-none"
-          />
-          <button
-            onClick={handleSwitchUser}
-            disabled={switching}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-weread hover:bg-weread-dark text-white text-sm transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={switching ? 'animate-spin' : ''} />
-            {switching ? '切换中...' : '切换'}
-          </button>
-        </div>
-      </div>
-
-      {/* API Key 管理 */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Key size={18} className="text-weread" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">API Key 管理</h3>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          <input
-            type="password"
-            value={newKey}
-            onChange={(e) => setNewKey(e.target.value)}
-            placeholder="输入新的 API Key"
-            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 outline-none"
-          />
-          <button
-            onClick={handleBindKey}
-            disabled={binding}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-weread hover:bg-weread-dark text-white text-sm transition-colors disabled:opacity-50"
-          >
-            <Plus size={14} /> 绑定
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          {keys.map((key) => (
-            <div key={key.id} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg">
-              <div>
-                <div className="text-sm text-slate-700 dark:text-slate-300">
-                  wrk-****{key.id} · {key.isActive ? '有效' : '无效'}
-                </div>
-                <div className="text-xs text-slate-400 mt-0.5">创建于 {key.createdAt}</div>
-              </div>
-              <button onClick={() => handleDeleteKey(key.id)} className="text-red-400 hover:text-red-500 p-1">
-                <Trash2 size={14} />
-              </button>
-            </div>
+    <div className="flex flex-col md:flex-row gap-8">
+      {/* 左侧导航 */}
+      <div className="w-full md:w-56 flex-shrink-0">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-5 px-2">设置</h2>
+        <nav className="flex flex-col space-y-1">
+          {navItems.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${
+                activeTab === key
+                  ? 'bg-white dark:bg-slate-800 shadow-sm text-weread ring-1 ring-gray-100 dark:ring-slate-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50'
+              }`}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
           ))}
-          {keys.length === 0 && <p className="text-sm text-slate-400 text-center py-4">暂无 API Key</p>}
-        </div>
+        </nav>
       </div>
 
-      {/* 同步配置 */}
-      {syncConfig && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock size={18} className="text-weread" />
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">同步设置</h3>
-          </div>
+      {/* 右侧内容区 */}
+      <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-8 min-h-[500px]">
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-slate-700 dark:text-slate-300">自动同步</label>
+        {/* 用户信息 */}
+        {activeTab === 'profile' && (
+          <div className="space-y-8">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 pb-4 mb-6">用户信息</h3>
+
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-weread to-weread-dark flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-lg shadow-weread/20">
+                {profile?.nickname?.[0] || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-semibold text-slate-800 dark:text-slate-200">{profile?.nickname || '未知用户'}</div>
+                <div className="text-sm text-slate-400 mt-1">VID: {profile?.vid || '-'}</div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-slate-800 dark:text-slate-200 mb-1">退出登录</div>
+                  <div className="text-sm text-slate-400">退出当前账号并返回登录页</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-red-500 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                >
+                  <LogOut size={14} /> 退出
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* API Key 管理 */}
+        {activeTab === 'keys' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 pb-4 mb-6">API Key 管理</h3>
+
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value)}
+                placeholder="输入 API Key"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 outline-none"
+              />
               <button
-                onClick={() => handleUpdateConfig('enabled', syncConfig.enabled ? 0 : 1)}
-                className={`w-10 h-6 rounded-full transition-colors ${syncConfig.enabled ? 'bg-weread' : 'bg-gray-300 dark:bg-slate-700'}`}
+                onClick={handleBindKey}
+                disabled={binding}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-weread hover:bg-weread-dark text-white text-sm transition-colors disabled:opacity-50"
               >
-                <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${syncConfig.enabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                <Plus size={14} /> 绑定
+              </button>
+              <button
+                onClick={handleSwitchUser}
+                disabled={switching}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={switching ? 'animate-spin' : ''} />
+                {switching ? '切换中...' : '切换用户'}
               </button>
             </div>
 
-            <div>
-              <label className="text-sm text-slate-700 dark:text-slate-300 block mb-1">同步频率</label>
-              <select
-                value={syncConfig.frequency}
-                onChange={(e) => handleUpdateConfig('frequency', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none"
-              >
-                <option value="hourly">每小时</option>
-                <option value="every6h">每 6 小时</option>
-                <option value="every12h">每 12 小时</option>
-                <option value="daily">每日</option>
-                <option value="weekly">每周</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-700 dark:text-slate-300 block mb-1">同步范围</label>
-              <select
-                value={syncConfig.syncScope}
-                onChange={(e) => handleUpdateConfig('syncScope', e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none"
-              >
-                <option value="full">全量</option>
-                <option value="shelf">仅书架</option>
-                <option value="notes">仅笔记</option>
-                <option value="progress">仅进度</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 同步日志 */}
-      {syncHistory.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-3">同步日志</h3>
-          <div className="space-y-2">
-            {syncHistory.map((log: any) => (
-              <div key={log.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-slate-800 rounded-lg text-sm">
-                <div>
-                  <span className="text-slate-700 dark:text-slate-300">{log.syncType}</span>
-                  <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${
-                    log.status === 'success' ? 'bg-green-50 dark:bg-green-950/30 text-green-600' :
-                    log.status === 'running' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600' :
-                    'bg-red-50 dark:bg-red-950/30 text-red-600'
-                  }`}>{log.status}</span>
+            <div className="space-y-3">
+              {keys.map((key) => (
+                <div key={key.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      wrk-****{key.id}
+                      <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${
+                        key.isActive
+                          ? 'bg-green-50 dark:bg-green-950/30 text-green-600'
+                          : 'bg-gray-100 dark:bg-slate-700 text-slate-400'
+                      }`}>
+                        {key.isActive ? '有效' : '无效'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1">创建于 {key.createdAt}</div>
+                  </div>
+                  <button onClick={() => handleDeleteKey(key.id)} className="text-red-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <div className="text-xs text-slate-400">{log.itemsCount} 条 · {log.finishedAt || '-'}</div>
-              </div>
-            ))}
+              ))}
+              {keys.length === 0 && (
+                <div className="text-center py-10">
+                  <Key size={28} className="mx-auto text-slate-300 mb-3" />
+                  <p className="text-sm text-slate-400">暂无 API Key</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* 同步设置 */}
+        {activeTab === 'sync' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 pb-4 mb-6">同步设置</h3>
+
+            {syncConfig ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                  <div>
+                    <div className="font-medium text-slate-800 dark:text-slate-200">自动同步</div>
+                    <div className="text-sm text-slate-400 mt-0.5">开启后按设定频率自动同步数据</div>
+                  </div>
+                  <button
+                    onClick={() => handleUpdateConfig('enabled', syncConfig.enabled ? 0 : 1)}
+                    className={`w-12 h-7 rounded-full transition-colors ${syncConfig.enabled ? 'bg-weread' : 'bg-gray-300 dark:bg-slate-600'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${syncConfig.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                  <div>
+                    <div className="font-medium text-slate-800 dark:text-slate-200">同步频率</div>
+                    <div className="text-sm text-slate-400 mt-0.5">设置自动同步的时间间隔</div>
+                  </div>
+                  <select
+                    value={syncConfig.frequency}
+                    onChange={(e) => handleUpdateConfig('frequency', e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none"
+                  >
+                    <option value="hourly">每小时</option>
+                    <option value="every6h">每 6 小时</option>
+                    <option value="every12h">每 12 小时</option>
+                    <option value="daily">每日</option>
+                    <option value="weekly">每周</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                  <div>
+                    <div className="font-medium text-slate-800 dark:text-slate-200">同步范围</div>
+                    <div className="text-sm text-slate-400 mt-0.5">选择需要同步的数据类型</div>
+                  </div>
+                  <select
+                    value={syncConfig.syncScope}
+                    onChange={(e) => handleUpdateConfig('syncScope', e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm outline-none"
+                  >
+                    <option value="full">全量</option>
+                    <option value="shelf">仅书架</option>
+                    <option value="notes">仅笔记</option>
+                    <option value="progress">仅进度</option>
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-10">
+                <Clock size={28} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-sm text-slate-400">暂无同步配置</p>
+              </div>
+            )}
+
+            {syncHistory.length > 0 && (
+              <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
+                <h4 className="font-medium text-slate-800 dark:text-slate-200 mb-3">同步日志</h4>
+                <div className="space-y-2">
+                  {syncHistory.map((log: any) => (
+                    <div key={log.id} className="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-slate-800 rounded-lg text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-700 dark:text-slate-300">{log.syncType}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          log.status === 'success' ? 'bg-green-50 dark:bg-green-950/30 text-green-600' :
+                          log.status === 'running' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600' :
+                          'bg-red-50 dark:bg-red-950/30 text-red-600'
+                        }`}>{log.status}</span>
+                      </div>
+                      <span className="text-xs text-slate-400">{log.itemsCount} 条 · {log.finishedAt || '-'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 关于 */}
+        {activeTab === 'about' && (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-weread to-weread-dark rounded-2xl flex items-center justify-center text-white shadow-xl shadow-weread/20">
+              <BookOpen size={36} />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">WeRead Plus</h3>
+            <p className="text-sm text-slate-400 mb-8">微信读书增强平台</p>
+
+            <div className="flex justify-center gap-8 mb-8">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-weread">1.0</div>
+                <div className="text-xs text-slate-400 mt-1">版本</div>
+              </div>
+              <div className="w-px bg-gray-200 dark:bg-slate-700" />
+              <div className="text-center">
+                <div className="text-2xl font-bold text-slate-700 dark:text-slate-300">React + GoFrame</div>
+                <div className="text-xs text-slate-400 mt-1">技术栈</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

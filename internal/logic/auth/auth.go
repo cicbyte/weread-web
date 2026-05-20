@@ -346,21 +346,34 @@ func (s *sAuth) generateJWT(vid string) (token string, expire int64, err error) 
 
 // storeApiKey 加密并存储 API Key
 func (s *sAuth) storeApiKey(ctx context.Context, vid string, apiKey string) error {
-	encrypted, err := s.encryptApiKey(apiKey)
+	// 遍历已有 Key，解密比对原文（AES-GCM 每次加密结果不同，不能直接比密文）
+	records, err := g.DB().Model("api_keys").Ctx(ctx).
+		Where("vid", vid).
+		Fields("id, api_key").
+		All()
 	if err != nil {
 		return err
 	}
 
-	// 检查是否已存在相同的 Key
-	count, _ := g.DB().Model("api_keys").Ctx(ctx).
-		Where("vid", vid).Where("api_key", encrypted).
-		Count()
-	if count > 0 {
-		g.DB().Model("api_keys").Ctx(ctx).
-			Where("vid", vid).Where("api_key", encrypted).
-			Data(g.Map{"is_active": 1}).
-			Update()
-		return nil
+	for _, r := range records {
+		decrypted, decErr := s.decryptApiKey(r["api_key"].String())
+		if decErr != nil {
+			continue
+		}
+		if decrypted == apiKey {
+			// 已存在，标记为有效
+			g.DB().Model("api_keys").Ctx(ctx).
+				Where("id", r["id"]).
+				Data(g.Map{"is_active": 1}).
+				Update()
+			return nil
+		}
+	}
+
+	// 不存在，加密后插入
+	encrypted, err := s.encryptApiKey(apiKey)
+	if err != nil {
+		return err
 	}
 
 	_, err = g.DB().Model("api_keys").Ctx(ctx).Insert(g.Map{
