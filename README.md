@@ -2,6 +2,35 @@
 
 > 微信读书增强平台 — 书架管理、阅读统计、笔记导出、智能搜索，一站式管理你的微信读书数据。
 
+## 预览
+
+<table>
+  <tr>
+    <td align="center"><b>仪表盘</b></td>
+    <td align="center"><b>书架</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dashboard.png" alt="仪表盘" width="480" /></td>
+    <td><img src="docs/screenshots/bookshelf.png" alt="书架" width="480" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>笔记中心</b></td>
+    <td align="center"><b>设置</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/notes.png" alt="笔记中心" width="480" /></td>
+    <td><img src="docs/screenshots/settings.png" alt="设置" width="480" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>全局搜索</b></td>
+    <td align="center"><b>深色模式</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/search.png" alt="全局搜索" width="480" /></td>
+    <td><img src="docs/screenshots/dashboard_dark.png" alt="深色模式" width="480" /></td>
+  </tr>
+</table>
+
 ## 功能特性
 
 - **书架管理** — 同步微信读书书架，支持全部/在读/读完/推荐筛选
