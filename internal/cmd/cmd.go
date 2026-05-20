@@ -26,7 +26,7 @@ var (
 			autoMigrate(ctx)
 
 			s := g.Server()
-			s.SetServerRoot("resource/public/html/, uploads")
+			s.SetServerRoot("resource/public/html/")
 
 			mcpHandler := mcp.NewStreamableHTTPServer()
 
@@ -34,6 +34,14 @@ var (
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
 				r := &router.Router{}
 				r.BindController(ctx, group)
+
+				// uploads 静态文件
+				group.Group("/uploads", func(upGroup *ghttp.RouterGroup) {
+					upGroup.ALL("/*", func(r *ghttp.Request) {
+						r.Response.ServeFile("uploads" + r.URL.Path[len("/uploads"):])
+						r.ExitAll()
+					})
+				})
 
 				// MCP 路由
 				group.Group("/mcp", func(mcpGroup *ghttp.RouterGroup) {
@@ -45,7 +53,7 @@ var (
 				// SPA 回退
 				group.Hook("/*", ghttp.HookBeforeServe, func(r *ghttp.Request) {
 					path := r.URL.Path
-					if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/mcp") {
+					if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/mcp") || strings.HasPrefix(path, "/uploads/") {
 						return
 					}
 					if strings.Contains(path, ".") && !strings.HasSuffix(path, "/") {
