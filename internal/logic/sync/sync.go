@@ -100,6 +100,17 @@ func (s *sSync) Trigger(ctx context.Context, vid string, scope string) (logId in
 
 // Status 获取最近同步状态
 func (s *sSync) Status(ctx context.Context, vid string) (res *api.StatusRes, err error) {
+	// 自动修复超时的 running 记录（超过 10 分钟仍在 running 视为中断）
+	g.DB().Model("sync_logs").Ctx(ctx).
+		Where("vid", vid).
+		Where("status", "running").
+		Where("started_at < ?", gtime.Now().Add(-10*time.Minute)).
+		Data(g.Map{
+			"status":      "failed",
+			"error_msg":   "同步超时，可能进程已中断",
+			"finished_at": gtime.Now(),
+		}).Update()
+
 	record, err := g.DB().Model("sync_logs").Ctx(ctx).
 		Where("vid", vid).
 		Order("id DESC").
