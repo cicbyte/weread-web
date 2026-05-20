@@ -26,7 +26,7 @@ var (
 			autoMigrate(ctx)
 
 			s := g.Server()
-			s.SetServerRoot("resource/public/html/")
+			s.SetServerRoot("resource/public/html/, uploads")
 
 			mcpHandler := mcp.NewStreamableHTTPServer()
 

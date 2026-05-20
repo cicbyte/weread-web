@@ -4,6 +4,7 @@ import (
 	"context"
 
 	api "github.com/cicbyte/weread-web/api/v1/auth"
+	"github.com/gogf/gf/v2/net/ghttp"
 )
 
 type IAuth interface {
@@ -24,6 +25,9 @@ type IAuth interface {
 
 	// DeleteKey 删除 API Key
 	DeleteKey(ctx context.Context, vid string, id int64) (res *api.DeleteKeyRes, err error)
+
+	// UpdateProfile 更新用户资料（昵称 + 头像）
+	UpdateProfile(ctx context.Context, vid string, nickname string, avatarFile *ghttp.UploadFile) (res *api.UpdateProfileRes, err error)
 
 	// ParseJWT 解析 JWT Token，返回 vid
 	ParseJWT(token string) (vid string, err error)

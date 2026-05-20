@@ -10,12 +10,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"time"
 
 	api "github.com/cicbyte/weread-web/api/v1/auth"
 	"github.com/cicbyte/weread-web/internal/service"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -451,4 +454,79 @@ func (s *sAuth) getJwtSecret() string {
 func (s *sAuth) getEncryptionKey() []byte {
 	secret := s.getJwtSecret()
 	return []byte(secret[:32])
+}
+
+// UpdateProfile 更新用户资料（昵称 + 头像）
+func (s *sAuth) UpdateProfile(ctx context.Context, vid string, nickname string, avatarFile *ghttp.UploadFile) (res *api.UpdateProfileRes, err error) {
+	avatarUrl := ""
+
+	// 处理头像上传
+	if avatarFile != nil {
+		// 读取上传文件
+		file, err := avatarFile.Open()
+		if err != nil {
+			return nil, fmt.Errorf("读取上传文件失败: %w", err)
+		}
+		defer file.Close()
+
+		data := make([]byte, 2*1024*1024) // 最大 2MB
+		n, err := file.Read(data)
+		if err != nil && err != io.EOF {
+			return nil, fmt.Errorf("读取文件内容失败: %w", err)
+		}
+		data = data[:n]
+
+		if n == 0 {
+			return nil, fmt.Errorf("上传文件为空")
+		}
+
+		// 保存路径: uploads/avatars/{vid[:2]}/{vid}.ext
+		basePath := g.Cfg().MustGet(nil, "storage.local.basePath").String()
+		if basePath == "" {
+			basePath = "uploads"
+		}
+		ext := filepath.Ext(avatarFile.Filename)
+		if ext == "" {
+			ext = ".jpg"
+		}
+		subDir := vid[:2]
+		saveDir := filepath.Join(basePath, "avatars", subDir)
+		if err := os.MkdirAll(saveDir, 0755); err != nil {
+			return nil, fmt.Errorf("创建目录失败: %w", err)
+		}
+		savePath := filepath.Join(saveDir, vid+ext)
+		if err := os.WriteFile(savePath, data, 0644); err != nil {
+			return nil, fmt.Errorf("保存头像失败: %w", err)
+		}
+
+		avatarUrl = fmt.Sprintf("/uploads/avatars/%s/%s%s", subDir, vid, ext)
+	}
+
+	// 更新数据库
+	updateData := g.Map{
+		"nickname": nickname,
+	}
+	if avatarUrl != "" {
+		updateData["avatar_url"] = avatarUrl
+	}
+	_, err = g.DB().Model("users").Ctx(ctx).
+		Where("vid", vid).
+		Data(updateData).
+		Update()
+	if err != nil {
+		return nil, fmt.Errorf("更新用户资料失败: %w", err)
+	}
+
+	// 返回最新数据
+	if avatarUrl == "" {
+		record, _ := g.DB().Model("users").Ctx(ctx).Where("vid", vid).One()
+		if record != nil {
+			avatarUrl = record["avatar_url"].String()
+		}
+	}
+
+	return &api.UpdateProfileRes{
+		Nickname:  nickname,
+		AvatarUrl: avatarUrl,
+	}, nil
 }

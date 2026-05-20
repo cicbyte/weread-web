@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/net/ghttp"
 )
 
 // LoginReq 登录请求
@@ -85,4 +86,18 @@ type DeleteKeyReq struct {
 type DeleteKeyRes struct {
 	g.Meta `mime:"application/json"`
 	Msg    string `json:"msg"`
+}
+
+// UpdateProfileReq 更新用户资料请求
+type UpdateProfileReq struct {
+	g.Meta     `path:"/auth/profile" method:"put" tags:"认证" summary:"更新用户资料" mime:"multipart/form-data"`
+	Nickname   string              `json:"nickname" v:"required#昵称不能为空"`
+	AvatarFile *ghttp.UploadFile   `json:"avatarFile" type:"file"`
+}
+
+// UpdateProfileRes 更新用户资料响应
+type UpdateProfileRes struct {
+	g.Meta    `mime:"application/json"`
+	Nickname  string `json:"nickname"`
+	AvatarUrl string `json:"avatarUrl"`
 }

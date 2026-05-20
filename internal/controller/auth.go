@@ -44,3 +44,7 @@ func (c *authManageController) BindKey(ctx context.Context, req *api.BindKeyReq)
 func (c *authManageController) DeleteKey(ctx context.Context, req *api.DeleteKeyReq) (res *api.DeleteKeyRes, err error) {
 	return service.Auth().DeleteKey(ctx, getVidFromCtx(ctx), req.Id)
 }
+
+func (c *authManageController) UpdateProfile(ctx context.Context, req *api.UpdateProfileReq) (res *api.UpdateProfileRes, err error) {
+	return service.Auth().UpdateProfile(ctx, getVidFromCtx(ctx), req.Nickname, req.AvatarFile)
+}

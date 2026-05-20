@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen } from 'lucide-react';
-import { authApi, syncApi } from '../services/apiService';
+import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X } from 'lucide-react';
+import { authApi, syncApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 type SettingsTab = 'profile' | 'keys' | 'sync' | 'about';
@@ -18,6 +18,16 @@ const SettingsPage: React.FC = () => {
   const [newKey, setNewKey] = useState('');
   const [binding, setBinding] = useState(false);
   const [switching, setSwitching] = useState(false);
+
+  // 昵称编辑
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [savingNickname, setSavingNickname] = useState(false);
+  const nicknameInputRef = useRef<HTMLInputElement>(null);
+
+  // 头像上传
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -97,6 +107,47 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleStartEditNickname = () => {
+    setNickname(profile?.nickname || '');
+    setEditingNickname(true);
+    setTimeout(() => nicknameInputRef.current?.focus(), 50);
+  };
+
+  const handleSaveNickname = async () => {
+    if (!nickname.trim()) return;
+    setSavingNickname(true);
+    try {
+      const result = await authApi.updateProfile(nickname.trim());
+      setProfile({ ...profile, nickname: result.nickname });
+      setEditingNickname(false);
+      showToast('昵称已更新', 'success');
+    } catch (err: any) {
+      showToast(err.message || '更新失败', 'error');
+    } finally {
+      setSavingNickname(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('图片不能超过 2MB', 'error');
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const result = await authApi.updateProfile(profile?.nickname || '用户', file);
+      setProfile({ ...profile, avatarUrl: result.avatarUrl });
+      showToast('头像已更新', 'success');
+    } catch (err: any) {
+      showToast(err.message || '上传失败', 'error');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -143,12 +194,65 @@ const SettingsPage: React.FC = () => {
           <div className="space-y-8">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 pb-4 mb-6">用户信息</h3>
 
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-weread to-weread-dark flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-lg shadow-weread/20">
-                {profile?.nickname?.[0] || '?'}
+            <div className="flex items-center gap-6">
+              {/* 头像 */}
+              <div className="relative group flex-shrink-0">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-weread to-weread-dark shadow-lg shadow-weread/20">
+                  {profile?.avatarUrl ? (
+                    <img src={profile.avatarUrl.startsWith('/') ? profile.avatarUrl : proxyImageUrl(profile.avatarUrl)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
+                      {profile?.nickname?.[0] || '?'}
+                    </div>
+                  )}
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
+                      <Loader2 size={24} className="text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 rounded-2xl transition-colors cursor-pointer"
+                >
+                  <Camera size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
               </div>
+
+              {/* 昵称 + VID */}
               <div className="flex-1 min-w-0">
-                <div className="text-lg font-semibold text-slate-800 dark:text-slate-200">{profile?.nickname || '未知用户'}</div>
+                {editingNickname ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={nicknameInputRef}
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
+                      className="px-3 py-1.5 rounded-lg border border-weread/30 text-lg font-semibold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-weread/30 outline-none"
+                      maxLength={20}
+                    />
+                    <button onClick={handleSaveNickname} disabled={savingNickname} className="p-1.5 rounded-lg text-weread hover:bg-weread/10 transition-colors">
+                      {savingNickname ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                    </button>
+                    <button onClick={() => setEditingNickname(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">{profile?.nickname || '未知用户'}</span>
+                    <button onClick={handleStartEditNickname} className="p-1 rounded text-slate-400 hover:text-weread hover:bg-weread/10 transition-colors">
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+                )}
                 <div className="text-sm text-slate-400 mt-1">VID: {profile?.vid || '-'}</div>
               </div>
             </div>

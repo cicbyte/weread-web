@@ -93,6 +93,24 @@ export const authApi = {
 
   deleteKey: (id: number) =>
     request<{ msg: string }>(`/auth/keys/${id}`, { method: 'DELETE' }),
+
+  updateProfile: async (nickname: string, avatarFile?: File) => {
+    const url = `${API_BASE_URL}/auth/profile`;
+    const token = localStorage.getItem('weread_token');
+    const formData = new FormData();
+    formData.append('nickname', nickname);
+    if (avatarFile) formData.append('avatarFile', avatarFile);
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!response.ok) throw new Error('更新失败');
+    const json = await response.json();
+    if (json.code !== 0) throw new Error(json.message || '更新失败');
+    return json.data as { nickname: string; avatarUrl: string };
+  },
 };
 
 // 代理 API - 转发到微信读书
