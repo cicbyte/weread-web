@@ -189,9 +189,12 @@ const BookDetailPage: React.FC = () => {
         <div className="space-y-3">
           {highlights.length > 0 ? highlights.map((h: any, i: number) => (
             <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 p-4">
-              <blockquote className="text-sm text-slate-700 dark:text-slate-300 border-l-2 border-weread pl-3">
-                {h.markText}
-              </blockquote>
+              <div className="flex items-start gap-2">
+                <span className="text-xs text-slate-400 mt-0.5 flex-shrink-0 w-5 text-right">{i + 1}.</span>
+                <blockquote className="text-sm text-slate-700 dark:text-slate-300 border-l-2 border-weread pl-3">
+                  {h.markText}
+                </blockquote>
+              </div>
               <div className="text-xs text-slate-400 mt-2">
                 {h.createTime ? new Date(h.createTime * 1000).toLocaleDateString() : ''}
               </div>
