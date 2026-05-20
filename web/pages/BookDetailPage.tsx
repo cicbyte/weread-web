@@ -57,7 +57,7 @@ const BookDetailPage: React.FC = () => {
   const loadReviews = async () => {
     try {
       const data = await wereadApi.reviewList(bookId!, 0);
-      setReviews(data?.reviews?.map((r: any) => r.review) || []);
+      setReviews(data?.reviews?.map((r: any) => ({ ...r.review, ...r.review.review, likesCount: r.review.likesCount, commentsCount: r.review.commentsCount })) || []);
     } catch {
       // ignore
     }
@@ -220,11 +220,15 @@ const BookDetailPage: React.FC = () => {
                   </span>
                 )}
                 {r.isFinish === 1 && <span className="text-xs text-green-600">已读完</span>}
+                {(r.likesCount > 0 || r.commentsCount > 0) && (
+                  <span className="ml-auto text-xs text-slate-400">
+                    {r.likesCount > 0 && `${r.likesCount}赞`}
+                    {r.likesCount > 0 && r.commentsCount > 0 && ' · '}
+                    {r.commentsCount > 0 && `${r.commentsCount}评`}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{r.content}</p>
-              {r.chapterName && (
-                <div className="text-xs text-slate-400 mt-2">章节: {r.chapterName}</div>
-              )}
             </div>
           )) : (
             <p className="text-center text-slate-400 py-8">暂无点评</p>
