@@ -24,6 +24,11 @@ func New() *sImage {
 type sImage struct{}
 
 func (s *sImage) Proxy(ctx context.Context, imageURL string) (filePath string, err error) {
+	// 跳过明显无效的 URL（域名不完整等）
+	if len(imageURL) < 20 || !strings.Contains(imageURL, ".com") && !strings.Contains(imageURL, ".cn") {
+		return "", fmt.Errorf("无效的图片 URL")
+	}
+
 	cacheDir := s.getCacheDir()
 
 	hash := sha256.Sum256([]byte(imageURL))
