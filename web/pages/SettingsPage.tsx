@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Key, Clock, Loader2, Trash2, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw } from 'lucide-react';
 import { authApi, syncApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const SettingsPage: React.FC = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
   const [keys, setKeys] = useState<any[]>([]);
   const [syncConfig, setSyncConfig] = useState<any>(null);
   const [syncHistory, setSyncHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newKey, setNewKey] = useState('');
   const [binding, setBinding] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -18,11 +22,13 @@ const SettingsPage: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [keysData, configData, historyData] = await Promise.allSettled([
+      const [profileData, keysData, configData, historyData] = await Promise.allSettled([
+        authApi.profile(),
         authApi.listKeys(),
         syncApi.getConfig(),
         syncApi.history(1, 10),
       ]);
+      if (profileData.status === 'fulfilled') setProfile(profileData.value);
       if (keysData.status === 'fulfilled') setKeys(keysData.value?.keys || []);
       if (configData.status === 'fulfilled') setSyncConfig(configData.value);
       if (historyData.status === 'fulfilled') setSyncHistory(historyData.value?.list || []);
@@ -57,6 +63,27 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleSwitchUser = async () => {
+    setSwitching(true);
+    try {
+      const loginData = await authApi.login(newKey.trim());
+      localStorage.setItem('weread_token', loginData.token);
+      localStorage.setItem('weread_vid', loginData.vid);
+      showToast('切换成功，页面即将刷新', 'success');
+      setTimeout(() => window.location.reload(), 500);
+    } catch (err: any) {
+      showToast(err.message || '切换失败', 'error');
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('weread_token');
+    localStorage.removeItem('weread_vid');
+    navigate('/login');
+  };
+
   const handleUpdateConfig = async (field: string, value: any) => {
     try {
       await syncApi.updateConfig({ [field]: value });
@@ -76,8 +103,57 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl mx-auto space-y-6">
       <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">设置</h2>
+
+      {/* 用户信息 */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <User size={18} className="text-weread" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">用户信息</h3>
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-weread to-weread-dark flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+            {profile?.nickname?.[0] || '?'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{profile?.nickname || '未知用户'}</div>
+            <div className="text-xs text-slate-400 mt-0.5">VID: {profile?.vid || '-'}</div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+          >
+            <LogOut size={14} /> 退出登录
+          </button>
+        </div>
+      </div>
+
+      {/* 切换用户 */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <RefreshCw size={18} className="text-weread" />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">切换用户</h3>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={newKey}
+            onChange={(e) => setNewKey(e.target.value)}
+            placeholder="输入新的 API Key 切换账号"
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-weread/30 outline-none"
+          />
+          <button
+            onClick={handleSwitchUser}
+            disabled={switching}
+            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-weread hover:bg-weread-dark text-white text-sm transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={switching ? 'animate-spin' : ''} />
+            {switching ? '切换中...' : '切换'}
+          </button>
+        </div>
+      </div>
 
       {/* API Key 管理 */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-800 p-5">
