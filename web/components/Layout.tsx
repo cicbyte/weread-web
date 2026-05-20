@@ -3,9 +3,9 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Search, StickyNote,
   Settings, Sun, Moon, LogOut, Menu, Loader2,
-  PanelLeftClose, PanelLeftOpen, Home
+  PanelLeftClose, PanelLeftOpen, Home, User
 } from 'lucide-react';
-import { wereadApi, proxyImageUrl } from '../services/apiService';
+import { wereadApi, proxyImageUrl, authApi, SERVER_URL } from '../services/apiService';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: '仪表盘' },
@@ -39,6 +39,11 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem('weread_sidebar_collapsed') === 'true';
   });
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    authApi.profile().then(setProfile).catch(() => {});
+  }, []);
 
   // 搜索状态
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -158,8 +163,29 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
             ))}
           </nav>
 
-          {/* 底部留白 */}
-          <div className="h-2" />
+          {/* 底部用户信息 */}
+          <div className={`border-t border-gray-100 dark:border-slate-800 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}>
+            <div
+              onClick={() => navigate('/settings')}
+              className={`flex items-center rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors ${
+                collapsed ? 'justify-center py-2' : 'gap-3 px-2 py-2'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-weread to-weread-dark flex items-center justify-center text-white text-sm font-bold flex-shrink-0 overflow-hidden">
+                {profile?.avatarUrl ? (
+                  <img src={profile.avatarUrl.startsWith('/') ? `${SERVER_URL}${profile.avatarUrl}` : proxyImageUrl(profile.avatarUrl)} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  profile?.nickname?.[0] || <User size={14} />
+                )}
+              </div>
+              {!collapsed && (
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{profile?.nickname || '未设置'}</div>
+                  <div className="text-[10px] text-slate-400 truncate">点击设置</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </aside>
 
