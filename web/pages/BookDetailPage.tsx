@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, BookOpen, List, MessageSquare, Star, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, BookOpen, List, MessageSquare, Star, Download, FileText, FileCode, FileDown } from 'lucide-react';
 import { wereadApi, proxyImageUrl } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -15,6 +15,7 @@ const BookDetailPage: React.FC = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'notes' | 'reviews'>('info');
   const [exporting, setExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -133,6 +134,38 @@ const BookDetailPage: React.FC = () => {
           {book?.intro && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 line-clamp-3">{book.intro}</p>
           )}
+          <div className="relative mt-3">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={exporting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+            >
+              <Download size={14} />
+              {exporting ? '导出中...' : '导出笔记'}
+            </button>
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 shadow-lg py-1 min-w-[140px]">
+                  {([
+                    { fmt: 'markdown', label: 'Markdown', icon: FileCode },
+                    { fmt: 'html', label: 'HTML', icon: FileText },
+                    { fmt: 'txt', label: '纯文本', icon: FileText },
+                    { fmt: 'pdf', label: 'PDF', icon: FileDown },
+                  ] as const).map(({ fmt, label, icon: Icon }) => (
+                    <button
+                      key={fmt}
+                      onClick={() => { handleExport(fmt); setShowExportMenu(false); }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <Icon size={14} className="text-slate-400" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -155,20 +188,6 @@ const BookDetailPage: React.FC = () => {
             <Icon size={14} /> {label}
           </button>
         ))}
-        <div className="flex items-center gap-1 px-2">
-          {(['markdown', 'html', 'txt', 'pdf'] as const).map((fmt) => (
-            <button
-              key={fmt}
-              onClick={() => handleExport(fmt)}
-              disabled={exporting}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-slate-500 hover:text-weread hover:bg-weread/10 transition-colors disabled:opacity-50"
-              title={`导出为 ${fmt.toUpperCase()}`}
-            >
-              <Download size={12} />
-              {fmt === 'markdown' ? 'MD' : fmt.toUpperCase()}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Tab 内容 */}
