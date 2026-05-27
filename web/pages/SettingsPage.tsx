@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X } from 'lucide-react';
-import { authApi, syncApi, proxyImageUrl, SERVER_URL } from '../services/apiService';
+import { authApi, syncApi, proxyImageUrl, SERVER_URL, healthApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 type SettingsTab = 'profile' | 'keys' | 'sync' | 'about';
@@ -28,6 +28,7 @@ const SettingsPage: React.FC = () => {
   // 头像上传
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [appVersion, setAppVersion] = useState('-');
 
   useEffect(() => {
     loadData();
@@ -49,6 +50,7 @@ const SettingsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+    healthApi.detail().then(d => setAppVersion(d.version || '-')).catch(() => {});
   };
 
   const handleBindKey = async () => {
@@ -429,7 +431,7 @@ const SettingsPage: React.FC = () => {
 
             <div className="flex justify-center gap-8 mb-8">
               <div className="text-center">
-                <div className="text-2xl font-bold text-weread">1.0</div>
+                <div className="text-2xl font-bold text-weread">{appVersion}</div>
                 <div className="text-xs text-slate-400 mt-1">版本</div>
               </div>
               <div className="w-px bg-gray-200 dark:bg-slate-700" />
