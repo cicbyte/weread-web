@@ -16,8 +16,8 @@ RUN go mod download
 COPY . .
 COPY --from=frontend /build/web/dist/ resource/public/html/
 RUN go install github.com/gogf/gf/cmd/gf/v2@latest
-RUN gf build -n wekeep -v $(cat VERSION) -p /build/bin -a amd64 -s linux \
-    && mv /build/bin/$(cat VERSION)/linux_amd64/wekeep /build/wekeep
+RUN gf build -n weread-plus -v $(cat VERSION) -p /build/bin -a amd64 -s linux \
+    && mv /build/bin/$(cat VERSION)/linux_amd64/weread-plus /build/weread-plus
 
 # ====== 运行镜像 ======
 FROM alpine:3.21
@@ -25,9 +25,9 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
-COPY --from=backend /build/wekeep /app/wekeep
+COPY --from=backend /build/weread-plus /app/weread-plus
 
 ENV TZ=Asia/Shanghai
-EXPOSE 8000
+EXPOSE 8793
 
-ENTRYPOINT ["/app/wekeep"]
+ENTRYPOINT ["/app/weread-plus"]
