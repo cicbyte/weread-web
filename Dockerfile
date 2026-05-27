@@ -16,8 +16,8 @@ RUN go mod download
 COPY . .
 COPY --from=frontend /build/web/dist/ resource/public/html/
 RUN go install github.com/gogf/gf/cmd/gf/v2@latest
-RUN gf build -n weread-plus -v $(cat VERSION) -p /build/bin -a amd64 -s linux \
-    && mv /build/bin/$(cat VERSION)/linux_amd64/weread-plus /build/weread-plus
+RUN gf build -n weread-web -v $(cat VERSION) -p /build/bin -a amd64 -s linux \
+    && mv /build/bin/$(cat VERSION)/linux_amd64/weread-web /build/weread-web
 
 # ====== 运行镜像 ======
 FROM alpine:3.21
@@ -25,9 +25,9 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
-COPY --from=backend /build/weread-plus /app/weread-plus
+COPY --from=backend /build/weread-web /app/weread-web
 
 ENV TZ=Asia/Shanghai
 EXPOSE 8793
 
-ENTRYPOINT ["/app/weread-plus"]
+ENTRYPOINT ["/app/weread-web"]

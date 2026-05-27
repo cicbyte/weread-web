@@ -130,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({ isDarkMode, toggleDark }) => {
             <img src="/favicon.svg" alt="" className="w-9 h-9 flex-shrink-0" />
             {!collapsed && (
               <div className="overflow-hidden">
-                <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">WeRead Plus</h1>
+                <h1 className="text-sm font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">WeRead Web</h1>
                 <p className="text-[10px] text-slate-400 whitespace-nowrap">微信读书增强平台</p>
               </div>
             )}

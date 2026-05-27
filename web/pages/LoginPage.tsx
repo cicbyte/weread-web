@@ -36,7 +36,7 @@ const LoginPage: React.FC<{ isDarkMode: boolean; toggleDark: () => void }> = ({ 
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img src="/favicon.svg" alt="" className="w-16 h-16 mx-auto mb-4 shadow-lg rounded-2xl" />
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">WeRead Plus</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">WeRead Web</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">微信读书增强平台</p>
         </div>
 

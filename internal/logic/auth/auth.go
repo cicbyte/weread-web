@@ -443,7 +443,7 @@ func (s *sAuth) decryptApiKey(cipherText string) (string, error) {
 func (s *sAuth) getJwtSecret() string {
 	secret := g.Cfg().MustGet(nil, "auth.jwtSecret").String()
 	if secret == "" {
-		secret = "weread-plus-default-secret"
+		secret = "weread-web-default-secret"
 	}
 	if len(secret) < 32 {
 		secret = secret + "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

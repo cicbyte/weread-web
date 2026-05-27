@@ -1,4 +1,4 @@
-# WeRead Plus
+# WeRead Web
 
 > 微信读书增强平台 — 书架管理、阅读统计、笔记导出、智能搜索，一站式管理你的微信读书数据。
 
@@ -133,12 +133,12 @@ weread-web/
 ## Docker 部署
 
 ```bash
-docker build -t weread-plus .
+docker build -t weread-web .
 
 docker run -d -p 8793:8793 \
   -v ./manifest:/app/manifest \
   -v ./uploads:/app/uploads \
-  weread-plus
+  weread-web
 ```
 
 ## License

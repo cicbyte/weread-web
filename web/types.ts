@@ -1,4 +1,4 @@
-// WeRead Plus 类型定义
+// WeRead Web 类型定义
 
 export interface HealthDetail {
   status: string;

@@ -424,7 +424,7 @@ const SettingsPage: React.FC = () => {
         {activeTab === 'about' && (
           <div className="text-center py-12">
             <img src="/favicon.svg" alt="" className="w-20 h-20 mx-auto mb-5 shadow-xl shadow-weread/20 rounded-2xl" />
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">WeRead Plus</h3>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">WeRead Web</h3>
             <p className="text-sm text-slate-400 mb-8">微信读书增强平台</p>
 
             <div className="flex justify-center gap-8 mb-8">
