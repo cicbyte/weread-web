@@ -54,15 +54,15 @@ search:
 `
 
 func init() {
-	// 通过 gbuild 编译变量判断是否为生产构建（gf build 会注入，gf run 不会）
+	// 生产构建时切换工作目录到可执行文件所在目录
 	if gbuild.Get(gbuild.BuiltVersion) != nil {
 		if exe, err := os.Executable(); err == nil {
 			if dir := filepath.Dir(exe); dir != "" {
 				os.Chdir(dir)
 			}
 		}
-		ensureDefaultConfig()
 	}
+	ensureDefaultConfig()
 }
 
 func ensureDefaultConfig() {
