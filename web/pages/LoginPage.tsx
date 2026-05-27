@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { BookOpen, Eye, EyeOff, Loader2, ExternalLink } from 'lucide-react';
 import { authApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -35,9 +35,7 @@ const LoginPage: React.FC<{ isDarkMode: boolean; toggleDark: () => void }> = ({ 
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950 p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-weread to-weread-dark rounded-2xl flex items-center justify-center text-white shadow-lg">
-            <BookOpen size={32} />
-          </div>
+          <img src="/favicon.svg" alt="" className="w-16 h-16 mx-auto mb-4 shadow-lg rounded-2xl" />
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">WeRead Plus</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">微信读书增强平台</p>
         </div>
@@ -75,8 +73,18 @@ const LoginPage: React.FC<{ isDarkMode: boolean; toggleDark: () => void }> = ({ 
           </button>
 
           <p className="text-xs text-center text-slate-400 dark:text-slate-500">
-            API Key 从微信读书 Agent API Gateway 获取，格式为 wrk-xxxx
+            API Key 从微信读书 Skill 获取，格式为 wrk-xxxx
           </p>
+
+          <a
+            href="https://weread.qq.com/r/weread-skills"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1 text-xs text-weread hover:text-weread-dark transition-colors"
+          >
+            <ExternalLink size={12} />
+            前往微信读书获取 API Key
+          </a>
         </form>
 
         <div className="text-center mt-6">
