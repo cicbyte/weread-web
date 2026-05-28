@@ -16,8 +16,9 @@ RUN go mod download
 COPY . .
 COPY --from=frontend /build/web/dist/ resource/public/html/
 RUN go install github.com/gogf/gf/cmd/gf/v2@latest
-RUN gf build -n weread-web -v $(cat VERSION) -p /build/bin -a amd64 -s linux \
-    && mv /build/bin/$(cat VERSION)/linux_amd64/weread-web /build/weread-web
+RUN gf pack resource internal/packed/packed.go
+RUN gf build -n weread-web -v $(cat VERSION) -a amd64 -s linux \
+    && mv ./weread-web /build/weread-web
 
 # ====== 运行镜像 ======
 FROM alpine:3.21
