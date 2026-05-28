@@ -69,3 +69,4 @@ internal/packed/
 delete_tags.py
 .reference/
 .scratch/
+msg.txt
