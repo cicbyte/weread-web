@@ -36,12 +36,12 @@ logger:
 
 database:
   default:
-    link: "sqlite::@file(db/weread.db)"
+    link: "sqlite::@file(data/db/weread_web.db)"
 
 storage:
   type: "local"
   local:
-    basePath: "uploads"
+    basePath: "data/uploads"
     baseURL: "/uploads"
   image:
     maxFileSize: 10485760

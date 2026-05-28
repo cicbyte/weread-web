@@ -33,7 +33,7 @@ var (
 			// uploads 静态文件（不走中间件，避免 JSON 包装破坏二进制数据）
 			s.Group("/uploads", func(group *ghttp.RouterGroup) {
 				group.ALL("/*", func(r *ghttp.Request) {
-					r.Response.ServeFile("uploads" + r.URL.Path[len("/uploads"):])
+					r.Response.ServeFile("data/uploads" + r.URL.Path[len("/uploads"):])
 					r.ExitAll()
 				})
 			})
@@ -73,17 +73,20 @@ var (
 )
 
 func ensureDataDirs(ctx context.Context) {
-	dbLink := g.Cfg().MustGet(ctx, "database.default.link").String()
-	if !strings.HasPrefix(dbLink, "sqlite") {
-		return
-	}
-	re := regexp.MustCompile(`@file\((.+)\)`)
-	matches := re.FindStringSubmatch(dbLink)
-	if len(matches) < 2 {
-		return
-	}
-	dir := filepath.Dir(matches[1])
-	if dir != "" && dir != "." {
+	// 确保 data 目录结构存在
+	for _, dir := range []string{"data/db", "data/uploads"} {
 		os.MkdirAll(dir, 0755)
+	}
+
+	dbLink := g.Cfg().MustGet(ctx, "database.default.link").String()
+	if strings.HasPrefix(dbLink, "sqlite") {
+		re := regexp.MustCompile(`@file\((.+)\)`)
+		matches := re.FindStringSubmatch(dbLink)
+		if len(matches) >= 2 {
+			dir := filepath.Dir(matches[1])
+			if dir != "" && dir != "." {
+				os.MkdirAll(dir, 0755)
+			}
+		}
 	}
 }

@@ -27,6 +27,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
 COPY --from=backend /build/weread-web /app/weread-web
+RUN mkdir -p /app/data/db /app/data/uploads
 
 ENV TZ=Asia/Shanghai
 EXPOSE 8793

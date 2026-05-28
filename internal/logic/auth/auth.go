@@ -483,7 +483,7 @@ func (s *sAuth) UpdateProfile(ctx context.Context, vid string, nickname string, 
 		// 保存路径: uploads/avatars/{vid[:2]}/{vid}.ext
 		basePath := g.Cfg().MustGet(nil, "storage.local.basePath").String()
 		if basePath == "" {
-			basePath = "uploads"
+			basePath = "data/uploads"
 		}
 		ext := filepath.Ext(avatarFile.Filename)
 		if ext == "" {

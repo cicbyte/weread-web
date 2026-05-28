@@ -74,7 +74,7 @@ func (s *sImage) Proxy(ctx context.Context, imageURL string) (filePath string, e
 func (s *sImage) getCacheDir() string {
 	base := g.Cfg().MustGet(nil, "storage.local.basePath").String()
 	if base == "" {
-		base = "uploads"
+		base = "data/uploads"
 	}
 	return filepath.Join(base, "covers")
 }

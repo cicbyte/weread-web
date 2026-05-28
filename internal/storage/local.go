@@ -31,7 +31,7 @@ func NewLocalProvider(cfg *LocalConfig) (*LocalProvider, error) {
 	// 设置默认值
 	basePath := cfg.BasePath
 	if basePath == "" {
-		basePath = "./uploads"
+		basePath = "./data/uploads"
 	}
 
 	// 确保路径是绝对路径

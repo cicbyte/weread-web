@@ -240,7 +240,7 @@ func createSourceProvider(cfg *MigrationConfig) (Provider, error) {
 		if localCfg == nil {
 			// 使用默认配置或当前配置
 			localCfg = &LocalConfig{
-				BasePath: "./uploads",
+				BasePath: "./data/uploads",
 				BaseURL:  "/uploads",
 			}
 		}
@@ -265,7 +265,7 @@ func createTargetProvider(cfg *MigrationConfig) (Provider, error) {
 		localCfg := cfg.LocalConfig
 		if localCfg == nil {
 			localCfg = &LocalConfig{
-				BasePath: "./uploads",
+				BasePath: "./data/uploads",
 				BaseURL:  "/uploads",
 			}
 		}
