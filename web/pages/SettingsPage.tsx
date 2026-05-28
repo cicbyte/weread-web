@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X } from 'lucide-react';
+import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X, ExternalLink, Github, Server, Code2, Heart } from 'lucide-react';
 import { authApi, syncApi, proxyImageUrl, SERVER_URL, healthApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -424,22 +424,78 @@ const SettingsPage: React.FC = () => {
 
         {/* 关于 */}
         {activeTab === 'about' && (
-          <div className="text-center py-12">
-            <img src="/favicon.svg" alt="" className="w-20 h-20 mx-auto mb-5 shadow-xl shadow-weread/20 rounded-2xl" />
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">WeRead Web</h3>
-            <p className="text-sm text-slate-400 mb-8">微信读书增强平台</p>
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-gray-100 dark:border-slate-800 pb-4">关于</h3>
 
-            <div className="flex justify-center gap-8 mb-8">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-weread">{appVersion}</div>
-                <div className="text-xs text-slate-400 mt-1">版本</div>
+            {/* 产品信息卡片 */}
+            <div className="flex items-center gap-5 p-6 bg-gradient-to-br from-weread/5 to-weread/10 dark:from-weread/10 dark:to-weread/5 rounded-2xl border border-weread/10">
+              <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 shadow-lg shadow-weread/10 flex items-center justify-center flex-shrink-0 p-2">
+                <img src="/favicon.svg" alt="WeRead Web" className="w-12 h-12" />
               </div>
-              <div className="w-px bg-gray-200 dark:bg-slate-700" />
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-700 dark:text-slate-300">React + GoFrame</div>
-                <div className="text-xs text-slate-400 mt-1">技术栈</div>
+              <div className="min-w-0">
+                <h4 className="text-xl font-bold text-slate-900 dark:text-white">WeRead Web</h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">微信读书增强平台</p>
               </div>
             </div>
+
+            {/* 信息网格 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl">
+                <div className="w-9 h-9 rounded-lg bg-weread/10 flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={16} className="text-weread" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-400">版本</div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">{appVersion}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0">
+                  <Code2 size={16} className="text-blue-500" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-400">技术栈</div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">React + GoFrame</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl">
+                <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center flex-shrink-0">
+                  <Server size={16} className="text-amber-500" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-400">开源协议</div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">MIT License</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl">
+                <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center flex-shrink-0">
+                  <Heart size={16} className="text-rose-500" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-400">作者</div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">cicbyte</div>
+                </div>
+              </div>
+            </div>
+
+            {/* GitHub 链接 */}
+            <a
+              href="https://github.com/cicbyte/weread-web"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-900 dark:bg-slate-700 flex items-center justify-center">
+                  <Github size={16} className="text-white" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-200">GitHub</div>
+                  <div className="text-xs text-slate-400">查看源码 · 提交 Issue · Star</div>
+                </div>
+              </div>
+              <ExternalLink size={16} className="text-slate-400 group-hover:text-weread transition-colors" />
+            </a>
           </div>
         )}
       </div>
