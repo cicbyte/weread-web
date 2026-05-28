@@ -1,7 +1,6 @@
 package export
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -12,7 +11,6 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
-	"github.com/jung-kurt/gofpdf"
 )
 
 func init() {
@@ -156,12 +154,6 @@ func (s *sExport) ExportNotes(ctx context.Context, vid, bookId, format string) (
 	case "txt":
 		filename = fmt.Sprintf("%s_笔记_%s.txt", bookTitle, date)
 		content = []byte(s.generateTXT(bookTitle, bookAuthor, groups))
-	case "pdf":
-		filename = fmt.Sprintf("%s_笔记_%s.pdf", bookTitle, date)
-		content, err = s.generatePDF(bookTitle, bookAuthor, groups)
-		if err != nil {
-			return "", nil, fmt.Errorf("生成PDF失败: %w", err)
-		}
 	default:
 		filename = fmt.Sprintf("%s_笔记_%s.md", bookTitle, date)
 		content = []byte(s.generateMarkdown(bookTitle, bookAuthor, groups))
@@ -250,68 +242,4 @@ func (s *sExport) generateTXT(title, author string, groups []noteGroup) string {
 	}
 
 	return sb.String()
-}
-
-
-func (s *sExport) generatePDF(title, author string, groups []noteGroup) ([]byte, error) {
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.AddPage()
-	pdf.SetAutoPageBreak(true, 20)
-
-	pdf.SetFont("Arial", "B", 20)
-	pdf.CellFormat(0, 12, title, "", 1, "C", false, 0, "")
-	if author != "" {
-		pdf.SetFont("Arial", "", 12)
-		pdf.CellFormat(0, 8, "Author: "+author, "", 1, "C", false, 0, "")
-	}
-	pdf.SetFont("Arial", "", 10)
-	pdf.CellFormat(0, 6, "Export: "+time.Now().Format("2006-01-02 15:04:05"), "", 1, "C", false, 0, "")
-	pdf.Ln(5)
-	pdf.Line(10, pdf.GetY(), 200, pdf.GetY())
-	pdf.Ln(5)
-
-	for _, g := range groups {
-		if pdf.GetY() > 260 {
-			pdf.AddPage()
-		}
-		pdf.SetFont("Arial", "B", 14)
-		pdf.CellFormat(0, 8, g.ChapterName, "", 1, "L", false, 0, "")
-		pdf.Ln(2)
-
-		pdf.SetFont("Arial", "I", 10)
-		for _, h := range g.Highlights {
-			if pdf.GetY() > 270 {
-				pdf.AddPage()
-			}
-			pdf.SetX(15)
-			pdf.SetDrawColor(7, 193, 96)
-			y := pdf.GetY()
-			pdf.Line(13, y, 13, y+6)
-			pdf.MultiCell(175, 5, h.Content, "", "L", false)
-			pdf.Ln(2)
-		}
-
-		pdf.SetFont("Arial", "", 10)
-		for _, r := range g.Reviews {
-			if pdf.GetY() > 270 {
-				pdf.AddPage()
-			}
-			pdf.SetX(15)
-			pdf.MultiCell(175, 5, "[idea] "+r.Content, "", "L", false)
-			if r.Abstract != "" {
-				pdf.SetX(20)
-				pdf.SetFont("Arial", "I", 9)
-				pdf.MultiCell(170, 4, r.Abstract, "", "L", false)
-				pdf.SetFont("Arial", "", 10)
-			}
-			pdf.Ln(2)
-		}
-		pdf.Ln(3)
-	}
-
-	var buf bytes.Buffer
-	if err := pdf.Output(&buf); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }

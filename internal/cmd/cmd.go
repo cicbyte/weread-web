@@ -38,6 +38,10 @@ var (
 				})
 			})
 
+			// 导出路由（不走 MiddlewareHandlerResponse，避免文件流被 JSON 包装）
+			exportRouter := &router.Router{}
+			exportRouter.BindExportRoutes(s)
+
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
 				r := &router.Router{}

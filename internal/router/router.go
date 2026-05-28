@@ -31,8 +31,18 @@ func (router *Router) BindController(ctx context.Context, group *ghttp.RouterGro
 				controller.AuthManage,
 				controller.Proxy,
 				controller.Sync,
-				controller.ExportNotes,
 			)
 		})
+	})
+}
+
+// BindExportRoutes 注册导出路由（不走 MiddlewareHandlerResponse，避免文件流被 JSON 包装）
+func (router *Router) BindExportRoutes(s *ghttp.Server) {
+	s.Group("/api/v1", func(group *ghttp.RouterGroup) {
+		group.Middleware(service.Middleware().MiddlewareCORS)
+		group.Middleware(service.Middleware().MiddlewareAuth)
+		group.Bind(
+			controller.ExportNotes,
+		)
 	})
 }

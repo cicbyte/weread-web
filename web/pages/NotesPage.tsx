@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Loader2, ArrowLeft, Download, FileText, FileCode, FileDown } from 'lucide-react';
-import { wereadApi, proxyImageUrl } from '../services/apiService';
+import { BookOpen, Loader2, ArrowLeft, Download, FileText, FileCode } from 'lucide-react';
+import { wereadApi, proxyImageUrl, SERVER_URL } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
 const NotesPage: React.FC = () => {
@@ -56,7 +56,7 @@ const NotesPage: React.FC = () => {
     setExporting(true);
     try {
       const token = localStorage.getItem('weread_token');
-      const resp = await fetch(`/api/v1/notes/export?bookId=${selectedBook}&format=${format}`, {
+      const resp = await fetch(`${SERVER_URL}/api/v1/notes/export?bookId=${selectedBook}&format=${format}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resp.ok) throw new Error('导出失败');
@@ -130,7 +130,6 @@ const NotesPage: React.FC = () => {
                         { fmt: 'markdown', label: 'Markdown', icon: FileCode },
                         { fmt: 'html', label: 'HTML', icon: FileText },
                         { fmt: 'txt', label: '纯文本', icon: FileText },
-                        { fmt: 'pdf', label: 'PDF', icon: FileDown },
                       ] as const).map(({ fmt, label, icon: Icon }) => (
                         <button
                           key={fmt}

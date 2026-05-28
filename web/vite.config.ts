@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
         port: 8898,
         host: '0.0.0.0',
         proxy: {
+          '/api': 'http://127.0.0.1:8793',
           '/uploads': 'http://127.0.0.1:8793',
         },
       },

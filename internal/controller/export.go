@@ -32,6 +32,6 @@ func (c *exportController) ExportNotes(ctx context.Context, req *api.ExportNotes
 	r.Response.Header().Set("Content-Type", "application/octet-stream")
 	r.Response.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, filename, encodedFilename))
 	r.Response.Write(content)
-	r.Exit()
+	r.ExitAll()
 	return nil, nil
 }
