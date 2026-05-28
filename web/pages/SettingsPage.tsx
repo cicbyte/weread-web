@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X, ExternalLink, Github, Server, Code2, Heart } from 'lucide-react';
+import { Key, Clock, Loader2, Trash2, Plus, User, LogOut, RefreshCw, Info, BookOpen, Camera, Pencil, Check, X, ExternalLink, Github, Server, Code2, Heart, Eye, EyeOff } from 'lucide-react';
 import { authApi, syncApi, proxyImageUrl, SERVER_URL, healthApi } from '../services/apiService';
 import { useToast } from '../components/Toast';
 
@@ -29,6 +29,7 @@ const SettingsPage: React.FC = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [appVersion, setAppVersion] = useState('-');
+  const [showVid, setShowVid] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -255,7 +256,12 @@ const SettingsPage: React.FC = () => {
                     </button>
                   </div>
                 )}
-                <div className="text-sm text-slate-400 mt-1">VID: {profile?.vid || '-'}</div>
+                <div className="flex items-center gap-1.5 text-sm text-slate-400 mt-1">
+                  <span>VID: {showVid ? (profile?.vid || '-') : (profile?.vid ? `${profile.vid.slice(0, 6)}${'•'.repeat(Math.max(0, profile.vid.length - 10))}${profile.vid.slice(-4)}` : '-')}</span>
+                  <button onClick={() => setShowVid(!showVid)} className="p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                    {showVid ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </div>
               </div>
             </div>
 

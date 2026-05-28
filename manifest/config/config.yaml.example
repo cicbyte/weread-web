@@ -1,4 +1,4 @@
-# WeRead Plus 配置模板
+# WeRead Web 配置模板
 # 使用: cp config.yaml.example config.yaml
 
 server:
@@ -19,9 +19,9 @@ logger:
 
 database:
   default:
-    link: "sqlite::@file(db/weread_plus.db)"
+    link: "sqlite::@file(data/db/weread_web.db)"
     # MySQL
-    #link: "mysql:root:123456@tcp(172.17.0.1:3306)/weread_plus?charset=utf8mb4&parseTime=true&loc=Local"
+    #link: "mysql:root:123456@tcp(172.17.0.1:3306)/weread_web?charset=utf8mb4&parseTime=true&loc=Local"
 
 # 微信读书 API 网关
 weread:
@@ -30,14 +30,14 @@ weread:
 
 # JWT 认证
 auth:
-  jwtSecret: "weread-plus-jwt-secret-change-me"
+  jwtSecret: "weread-web-jwt-secret-change-me"
   jwtExpire: 168  # 7天（小时）
   jwtRefreshExpire: 720  # 30天（小时）
 
 storage:
   type: "local"
   local:
-    basePath: "uploads"
+    basePath: "data/uploads"
     baseURL: "/uploads"
   image:
     maxFileSize: 10485760
