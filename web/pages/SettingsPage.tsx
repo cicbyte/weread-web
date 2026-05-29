@@ -19,6 +19,9 @@ const SettingsPage: React.FC = () => {
   const [binding, setBinding] = useState(false);
   const [switching, setSwitching] = useState(false);
 
+  // 已加载过的 tab 缓存
+  const [loadedTabs, setLoadedTabs] = useState<Set<SettingsTab>>(new Set());
+
   // 昵称编辑
   const [editingNickname, setEditingNickname] = useState(false);
   const [nickname, setNickname] = useState('');
@@ -31,27 +34,64 @@ const SettingsPage: React.FC = () => {
   const [appVersion, setAppVersion] = useState('-');
   const [showVid, setShowVid] = useState(false);
 
+  // 首次加载当前 tab 数据
   useEffect(() => {
-    loadData();
+    loadTabData(activeTab);
   }, []);
 
-  const loadData = async () => {
+  // 切换 tab 时按需加载
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    if (!loadedTabs.has(tab)) {
+      loadTabData(tab);
+    }
+  };
+
+  const markLoaded = (tab: SettingsTab) => {
+    setLoadedTabs(prev => new Set(prev).add(tab));
+  };
+
+  const loadTabData = async (tab: SettingsTab) => {
     try {
-      const [profileData, keysData, configData, historyData] = await Promise.allSettled([
-        authApi.profile(),
-        authApi.listKeys(),
-        syncApi.getConfig(),
-        syncApi.history(1, 10),
-      ]);
-      if (profileData.status === 'fulfilled') setProfile(profileData.value);
-      if (keysData.status === 'fulfilled') setKeys(keysData.value?.keys || []);
-      if (configData.status === 'fulfilled') setSyncConfig(configData.value);
-      if (historyData.status === 'fulfilled') setSyncHistory(historyData.value?.list || []);
+      switch (tab) {
+        case 'profile':
+          setLoading(true);
+          const profileData = await authApi.profile();
+          setProfile(profileData);
+          markLoaded('profile');
+          break;
+        case 'keys':
+          setLoading(true);
+          const keysData = await authApi.listKeys();
+          setKeys(keysData?.keys || []);
+          markLoaded('keys');
+          break;
+        case 'sync':
+          setLoading(true);
+          const [configData, historyData] = await Promise.allSettled([
+            syncApi.getConfig(),
+            syncApi.history(1, 10),
+          ]);
+          if (configData.status === 'fulfilled') setSyncConfig(configData.value);
+          if (historyData.status === 'fulfilled') setSyncHistory(historyData.value?.list || []);
+          markLoaded('sync');
+          break;
+        case 'about':
+          healthApi.detail().then(d => setAppVersion(d.version || '-')).catch(() => {});
+          markLoaded('about');
+          break;
+      }
     } catch {
     } finally {
       setLoading(false);
     }
-    healthApi.detail().then(d => setAppVersion(d.version || '-')).catch(() => {});
+  };
+
+  const reloadData = async (tabs: SettingsTab[]) => {
+    for (const tab of tabs) {
+      setLoadedTabs(prev => { const s = new Set(prev); s.delete(tab); return s; });
+    }
+    loadTabData(tabs[0]);
   };
 
   const handleBindKey = async () => {
@@ -61,7 +101,7 @@ const SettingsPage: React.FC = () => {
       await authApi.bindKey(newKey.trim());
       showToast('绑定成功', 'success');
       setNewKey('');
-      loadData();
+      reloadData(['keys']);
     } catch (err: any) {
       showToast(err.message || '绑定失败', 'error');
     } finally {
@@ -73,7 +113,7 @@ const SettingsPage: React.FC = () => {
     try {
       await authApi.deleteKey(id);
       showToast('已删除', 'success');
-      loadData();
+      reloadData(['keys']);
     } catch (err: any) {
       showToast(err.message || '删除失败', 'error');
     }
@@ -181,7 +221,7 @@ const SettingsPage: React.FC = () => {
           {navItems.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => handleTabChange(key)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-left cursor-pointer ${
                 activeTab === key
                   ? 'bg-weread text-white shadow-md shadow-weread/20'
