@@ -142,15 +142,13 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 同步状态 */}
-      {syncStatus && syncStatus.status !== 'never' && (
+      {/* 同步状态 — 仅在进行中或失败时展示，成功时隐藏 */}
+      {syncStatus && syncStatus.status !== 'never' && syncStatus.status !== 'success' && (
         <div className={`px-4 py-2.5 rounded-lg text-sm ${
           syncStatus.status === 'running' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
-          syncStatus.status === 'success' ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300' :
           'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
         }`}>
-          上次同步：{syncStatus.status === 'success' ? `成功 · ${syncStatus.itemsCount} 条` :
-            syncStatus.status === 'running' ? '进行中...' : `失败 · ${syncStatus.errorMsg || '未知错误'}`}
+          {syncStatus.status === 'running' ? '同步进行中...' : `上次同步失败 · ${syncStatus.errorMsg || '未知错误'}`}
         </div>
       )}
 
