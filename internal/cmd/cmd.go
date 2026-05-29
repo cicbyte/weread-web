@@ -24,6 +24,7 @@ var (
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			ensureDataDirs(ctx)
 			autoMigrate(ctx)
+			migrateConstraints(ctx)
 
 			s := g.Server()
 			s.SetServerRoot("resource/public/html/")

@@ -10,6 +10,7 @@ import (
 )
 
 // autoMigrate 启动时自动检查并创建数据表
+// migrateConstraints 为已有数据库补加约束（幂等）
 func autoMigrate(ctx context.Context) {
 	// 获取数据库类型
 	dbType := g.Cfg().MustGet(ctx, "database.default.link").String()
@@ -112,4 +113,39 @@ func splitSQL(sql string) []string {
 	}
 
 	return statements
+}
+
+// migrateConstraints 为已有数据库补加唯一约束（幂等，重复执行不报错）
+func migrateConstraints(ctx context.Context) {
+	dbType := g.Cfg().MustGet(ctx, "database.default.link").String()
+	db := g.DB()
+
+	switch {
+	case strings.HasPrefix(dbType, "sqlite"):
+		// SQLite: 先检查是否已有唯一索引
+		record, _ := db.GetOne(ctx,
+			"SELECT COUNT(*) as cnt FROM sqlite_master WHERE type='index' AND tbl_name='reading_progress' AND name='idx_reading_progress_vid_book'")
+		if record != nil && record["cnt"].Int() > 0 {
+			// 已有索引但不是唯一索引，需要重建
+			db.Exec(ctx, "DROP INDEX IF EXISTS idx_reading_progress_vid_book")
+		}
+		// 尝试添加唯一约束（忽略已存在的错误）
+		_, err := db.Exec(ctx, "CREATE UNIQUE INDEX IF NOT EXISTS uk_reading_progress_vid_book ON reading_progress(vid, book_id)")
+		if err != nil {
+			g.Log().Debugf(ctx, "migrateConstraints reading_progress: %v (may already exist)", err)
+		}
+
+	case strings.HasPrefix(dbType, "mysql"):
+		// MySQL: 检查是否已有唯一索引
+		record, _ := db.GetOne(ctx,
+			"SELECT COUNT(*) as cnt FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='reading_progress' AND index_name='uk_vid_book'")
+		if record == nil || record["cnt"].Int() == 0 {
+			// 先删除重复数据（保留最新一条）
+			db.Exec(ctx, `DELETE rp1 FROM reading_progress rp1 INNER JOIN reading_progress rp2 ON rp1.vid=rp2.vid AND rp1.book_id=rp2.book_id AND rp1.id < rp2.id`)
+			_, err := db.Exec(ctx, "ALTER TABLE reading_progress ADD UNIQUE KEY uk_vid_book (vid, book_id)")
+			if err != nil {
+				g.Log().Debugf(ctx, "migrateConstraints reading_progress: %v", err)
+			}
+		}
+	}
 }

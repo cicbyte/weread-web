@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS `reading_progress` (
     `update_time` BIGINT NOT NULL DEFAULT 0 COMMENT '最后阅读时间戳',
     `snapshot_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP COMMENT '快照时间',
     PRIMARY KEY (`id`),
-    KEY `idx_vid_book` (`vid`, `book_id`),
+    UNIQUE KEY `uk_vid_book` (`vid`, `book_id`),
     KEY `idx_vid_snapshot` (`vid`, `snapshot_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='阅读进度快照表';
 

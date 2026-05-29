@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS `reading_progress` (
     `chapter_offset` INTEGER DEFAULT 0,
     `read_time` INTEGER DEFAULT 0,
     `update_time` INTEGER DEFAULT 0,
-    `snapshot_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+    `snapshot_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(`vid`, `book_id`)
 );
 
 CREATE INDEX IF NOT EXISTS `idx_reading_progress_vid_book` ON `reading_progress` (`vid`, `book_id`);
