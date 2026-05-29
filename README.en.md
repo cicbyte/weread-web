@@ -1,200 +1,183 @@
-# WeKeep
+# WeRead Web
 
 English | [简体中文](README.md)
 
-> A WeChat Official Account article bookmarking tool — one-click save, full-text search, image localization, and AI-driven management.
+> WeRead assistant platform — Bookshelf management, reading stats, note export, smart search. All-in-one for your WeRead data.
 
-[![Docker Image](https://img.shields.io/badge/ghcr.io-cicbyte%2Fwekeep-blue?style=flat-square)](https://ghcr.io/cicbyte/wekeep)
-[![Docker Build](https://img.shields.io/github/actions/workflow/status/cicbyte/wekeep/docker-image.yml?branch=master&style=flat-square)](https://github.com/cicbyte/weread-web/actions)
-[![Release](https://img.shields.io/github/v/release/cicbyte/wekeep?style=flat-square)](https://github.com/cicbyte/weread-web/releases/latest)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/cicbyte/wekeep?style=flat-square)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
-![Dashboard](images/dashboard.png) ![Article List](images/articles.png) ![Author Management](images/author.png) ![Settings](images/settings.png)
+## Preview
+
+<table>
+  <tr>
+    <td align="center"><b>Dashboard</b></td>
+    <td align="center"><b>Bookshelf</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dashboard.png" alt="Dashboard" width="480" /></td>
+    <td><img src="docs/screenshots/bookshelf.png" alt="Bookshelf" width="480" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Notes</b></td>
+    <td align="center"><b>Settings</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/notes.png" alt="Notes" width="480" /></td>
+    <td><img src="docs/screenshots/settings.png" alt="Settings" width="480" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Search</b></td>
+    <td align="center"><b>Dark Mode</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/search.png" alt="Search" width="480" /></td>
+    <td><img src="docs/screenshots/dashboard_dark.png" alt="Dark Mode" width="480" /></td>
+  </tr>
+</table>
 
 ## Features
 
-- **Article Bookmarking** — Crawl WeChat Official Account articles, extract title/author/content/images, convert to Markdown
-- **Full-Text Search** — Powered by Meilisearch, search across titles, authors, summaries, and content
-- **Image Localization** — Auto-download article images to local storage or S3-compatible backends
-- **AI Integration** — Built-in MCP Server for direct article management from Claude, Cursor, and other AI clients
-- **Categories & Tags** — Flexible categorization and tagging system
-- **Author Management** — Auto-extract author info, browse articles by author
-- **Zero Config** — Auto-generates default config on first run, uses SQLite out of the box
+- **Bookshelf Management** — Sync WeRead bookshelf, filter by all/reading/finished/recommended
+- **Incremental Sync** — Change detection via `readUpdateTime`, only sync notes for changed books, auto-clean deleted data
+- **Global Search** — Real-time WeRead store search from the top search bar
+- **Reading Stats** — Dashboard with reading days, duration, trend charts, category preferences, book rankings, supports weekly/monthly/yearly/overall views
+- **Notes Center** — Browse all notebooks, view highlights and reviews
+- **Book Detail** — Table of contents, notes, reviews, multi-format export (Markdown/HTML/TXT/PDF)
+- **Image Cache** — Local proxy cache for book covers, 30-day HTTP cache
+- **Dark Mode** — Full dark mode support, follow system or manual toggle
+- **Responsive Layout** — Collapsible sidebar, mobile-friendly, breadcrumb navigation
+- **Scheduled Sync** — Configurable auto-sync frequency (hourly/6h/12h/daily/weekly) via Cron scheduler
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Go 1.24 / GoFrame v2.10.0 / MySQL / SQLite |
-| Frontend | React 19 / TypeScript 5.8 / Vite 6.2 / Tailwind CSS |
-| Search | Meilisearch (optional) |
+| Backend | Go 1.24 / GoFrame v2.10.0 / SQLite / MySQL |
+| Frontend | React 19 / TypeScript 5.8 / Vite 6.2 / Tailwind CSS / Recharts |
+| Icons | Lucide React |
 | Storage | Local filesystem / S3-compatible (RustFS) |
-| AI | MCP Server (AI tool integration) |
 
-## Quick Start
+## Getting Started
 
-### Pre-built Binary
+### Run from Source
 
-Download the archive for your platform from [Releases](https://github.com/cicbyte/weread-web/releases), extract and run:
-
-```bash
-./wekeep
-```
-
-On first run, `manifest/config/config.yaml` is auto-generated with SQLite as the default database — no extra dependencies needed.
-
-### Build from Source
-
-**Requirements:** Go 1.24+, Node.js 22+
+**Prerequisites:** Go 1.24+, Node.js 22+
 
 ```bash
-# Clone the repo
+# Clone the project
 git clone https://github.com/cicbyte/weread-web.git
-cd wekeep
+cd weread-web
 
-# Build the frontend
+# Build frontend
 cd web && npm i && npm run build && cd ..
 mkdir -p resource/public/html && cp -r web/dist/* resource/public/html/
 
-# Run
-gf run
+# Run (SQLite database is auto-created on first start)
+go run main.go
 ```
 
-The backend listens on `:8000` by default.
+Visit `http://localhost:8793`. Defaults to SQLite (data stored in `data/db/weread_web.db`), no external database required.
 
-## Configuration
+### Frontend Development
 
-On first run, `manifest/config/config.yaml` is auto-generated with these defaults:
-
-```yaml
-server:
-  address: ":8000"
-
-database:
-  default:
-    link: "sqlite::@file(wekeep.db)"    # SQLite by default, zero dependencies
-
-storage:
-  type: "local"
-  local:
-    basePath: "uploads"
-
-search:
-  enabled: false                          # Enable after installing Meilisearch
+```bash
+cd web
+npm run dev    # Dev server (port 8898)
+npm run build  # Build to web/dist/
 ```
 
-Switch to MySQL:
+Build output must be copied to `resource/public/html/` for the Go backend to serve.
+
+### Using MySQL
+
+Edit `manifest/config/config.yaml`:
 
 ```yaml
 database:
   default:
-    link: "mysql:root:password@tcp(127.0.0.1:3306)/wekeep?charset=utf8mb4&parseTime=true&loc=Local"
+    link: "mysql:root:123456@tcp(127.0.0.1:3306)/weread_web?charset=utf8mb4&parseTime=true&loc=Local"
 ```
 
-See [`manifest/config/config.yaml.example`](manifest/config/config.yaml.example) for the full config template.
+Tables are auto-created on first start.
 
-## Docker Deployment
+## Login
 
-Pull from GHCR:
+First-time use requires a WeRead Skill API Key (obtained via WeRead Skill). After login, the token is stored locally.
 
-```bash
-docker pull ghcr.io/cicbyte/wekeep:latest
+## Pages
 
-docker run -d -p 8000:8000 \
-  -v ./manifest:/app/manifest \
-  -v ./log:/app/log \
-  -v ./uploads:/app/uploads \
-  -v ./db:/app/db \
-  ghcr.io/cicbyte/wekeep:latest
-```
-
-Or build from source:
-
-```bash
-docker build -t wekeep .
-```
-
-Volume mounts:
-
-| Host Path | Container Path | Description |
-|-----------|---------------|-------------|
-| `./manifest` | `/app/manifest` | Config files (`config.yaml` auto-generated on first run) |
-| `./log` | `/app/log` | Logs |
-| `./uploads` | `/app/uploads` | Uploaded files |
-| `./db` | `/app/db` | SQLite database file |
-
-## MCP Server
-
-WeKeep includes a built-in MCP Server, allowing AI clients like Claude Desktop and Cursor to manage articles directly.
-
-**Endpoint:** `http://localhost:8000/mcp` (StreamableHTTP)
-
-**Configuration example (Claude Desktop):**
-
-```json
-{
-  "mcpServers": {
-    "wekeep": {
-      "url": "http://localhost:8000/mcp"
-    }
-  }
-}
-```
-
-**Available tools:**
-
-| Tool | Description |
-|------|-------------|
-| `wechat_parse_url` | Parse a WeChat article URL, extract title/author/content |
-| `wechat_save_article` | Save an article to your collection |
-| `wechat_list_articles` | List articles (with pagination) |
-| `wechat_get_article` | Get a single article's details |
-| `wechat_search_articles` | Full-text search articles |
-| `wechat_get_tags` | Get all tags |
-| `wechat_get_stats` | Get article statistics |
-| `wechat_delete_article` | Delete an article |
+| Page | Route | Description |
+|------|-------|-------------|
+| Dashboard | `/` | Reading stats overview: summary cards, key metrics, trend charts, category preferences, book rankings, reading tags |
+| Bookshelf | `/bookshelf` | Bookshelf management + recommendations, filter by all/reading/finished/recommended |
+| Notes | `/notes` | Notebook list → highlights and reviews |
+| Book Detail | `/book/:bookId` | TOC, notes, reviews, multi-format export |
+| Settings | `/settings` | Profile, API Key management, sync config, about |
 
 ## Project Structure
 
 ```
-wekeep/
+weread-web/
 ├── api/v1/                  # API request/response definitions (g.Meta route tags)
 ├── internal/
+│   ├── cmd/                 # Entry point, auto-migration, constraint patching
 │   ├── controller/          # HTTP controllers
 │   ├── service/             # Service interface definitions
-│   ├── logic/               # Business logic (auto-registered via init())
+│   ├── logic/               # Business logic implementations (init() auto-register)
+│   │   ├── auth/            # Auth: JWT, API Key management
+│   │   ├── sync/            # Sync: shelf/notes/progress/stats (incremental)
+│   │   ├── weread/          # WeRead API proxy
+│   │   └── proxy/           # Image cache proxy
 │   ├── dao/                 # Data access layer (auto-generated, do not edit)
 │   ├── model/               # Data models (entity/do/info)
-│   ├── parser/              # WeChat article HTML parser
-│   ├── storage/             # Storage abstraction (Local / S3)
+│   ├── router/              # Route registration
+│   ├── cron/                # Scheduled task scheduler
 │   ├── mcp/                 # MCP Server (StreamableHTTP)
-│   └── router/              # Route registration
-├── library/
-│   ├── libMeilisearch/      # Meilisearch client wrapper
-│   └── libRouter/           # Auto route binding
+│   └── storage/             # Storage abstraction (Local / S3)
 ├── web/                     # React frontend
+│   ├── components/          # Layout, Toast, and other shared components
+│   ├── pages/               # Page components
+│   └── services/            # API call services
 ├── resource/
-│   ├── public/html/         # Frontend build output (embedded in binary)
-│   └── sql/                 # Database init scripts (embedded in binary)
-├── scripts/                 # Build/release scripts
-├── manifest/config/         # Configuration files
-├── Dockerfile               # Multi-stage build
-└── .github/workflows/       # CI/CD
+│   ├── public/html/         # Frontend build output (bundled into binary)
+│   └── sql/                 # Database init scripts (MySQL / SQLite)
+├── scripts/                 # Screenshot and other utility scripts
+├── manifest/config/         # Config files
+└── Dockerfile               # Multi-stage build
 ```
 
 ## API
 
 | Module | Path | Description |
 |--------|------|-------------|
-| Articles | `/api/v1/articles` | CRUD, search, Gemini parsing |
-| Categories | `/api/v1/categories` | Category management |
-| Authors | `/api/v1/authors` | Author management |
-| Images | `/api/v1/images` | Image management, file proxy |
-| Search | `/api/v1/search/*` | Full-text search |
-| Storage | `/api/v1/storage/*` | Storage backend management |
-| MCP | `/mcp/*` | MCP Server (StreamableHTTP) |
-| System | `/api/v1/health/*` | Health check, version info |
+| Auth | `/api/v1/auth/*` | Login, token refresh, API key management, user profile |
+| WeRead Proxy | `/api/v1/weread/proxy` | Proxy forwarding to WeRead API |
+| Image Proxy | `/api/v1/image/proxy` | Book cover cache proxy |
+| Note Export | `/api/v1/notes/export` | Markdown/HTML/TXT/PDF export |
+| Data Sync | `/api/v1/sync/*` | Shelf, notes, progress, stats sync (incremental) |
+| System | `/api/v1/health` | Health check (with version, uptime) |
+| MCP | `/mcp/*` | AI tool integration (StreamableHTTP) |
+
+## Sync Strategy
+
+| Scope | Strategy |
+|-------|----------|
+| Shelf | Upsert (`vid + book_id`), clean up removed books after sync |
+| Notes | Change detection via `readUpdateTime`, only fetch notes for changed books, upsert + clean deleted notes |
+| Progress | Upsert (`vid + book_id`), clean up removed books after sync |
+| Stats | Delete + Insert (only 4 rows) |
+| Trigger | Manual / Cron scheduler (configurable frequency) |
+
+## Docker Deployment
+
+```bash
+docker build -t weread-web .
+
+docker run -d -p 8793:8793 \
+  -v ./manifest:/app/manifest \
+  -v ./data:/app/data \
+  weread-web
+```
 
 ## License
 
